@@ -4,7 +4,10 @@
   "description": "Backend services and Convex functions for CryptoVault Pro",
   "main": "index.js",
   "scripts": {
-    "dev": "convex dev",
+    "dev": "concurrently \"convex dev\" \"flutter run -d chrome\"",
+    "web": "flutter run -d chrome",
+    "web:release": "flutter run -d chrome --release",
+    "web:build": "flutter build web",
     "listener": "ts-node services/blockchainListener.ts",
     "processor": "ts-node services/withdrawalProcessor.ts",
     "build": "tsc"
@@ -16,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.24",
+    "concurrently": "^9.2.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }

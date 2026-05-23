@@ -175,7 +175,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.green.withOpacity(0.05), Colors.black],
+            colors: [Colors.green.withValues(alpha: 0.05), Colors.black],
           ),
         ),
         child: SingleChildScrollView(
@@ -271,7 +271,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         prefixIcon: Icon(icon, color: Colors.greenAccent),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: Colors.white.withValues(alpha: 0.05),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
       ),
     );
@@ -396,7 +396,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               txsAsync.when(
                 data: (txs) => _TransactionList(transactions: txs),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, s) => Center(child: Text('Failed to load transactions')),
+                error: (e, s) => const Center(child: Text('Failed to load transactions')),
               ),
             ],
           ),
@@ -429,7 +429,7 @@ class _PortfolioCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        boxShadow: [BoxShadow(color: Colors.greenAccent.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10))],
+        boxShadow: [BoxShadow(color: Colors.greenAccent.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 10))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -487,7 +487,7 @@ class _ActionTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E1E),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Column(
           children: [
@@ -542,11 +542,11 @@ class _TransactionList extends StatelessWidget {
             decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(15)),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: Colors.green.withOpacity(0.1),
+                backgroundColor: Colors.green.withValues(alpha: 0.1),
                 child: const Icon(Icons.call_received, color: Colors.greenAccent, size: 18),
               ),
               title: Text('$token Received (${tx['network']})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              subtitle: Text(tx['txHash'].toString().substring(0, 10) + "...", style: const TextStyle(fontSize: 12, color: Colors.white54)),
+              subtitle: Text("${tx['txHash'].toString().substring(0, 10)}...", style: const TextStyle(fontSize: 12, color: Colors.white54)),
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -621,7 +621,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
 
   Widget _buildTokenDropdown() {
     return DropdownButtonFormField<String>(
-      value: selectedToken,
+      initialValue: selectedToken,
       decoration: InputDecoration(
         labelText: 'Select Token',
         filled: true,
@@ -635,7 +635,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
 
   Widget _buildNetworkDropdown() {
     return DropdownButtonFormField<String>(
-      value: selectedNetwork,
+      initialValue: selectedNetwork,
       decoration: InputDecoration(
         labelText: 'Select Network',
         filled: true,
@@ -677,7 +677,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   Widget _buildSecurityNotice() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.orange.withOpacity(0.3))),
+      decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.orange.withValues(alpha: 0.3))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -784,7 +784,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
         const Text('Select Asset', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          value: selectedToken,
+          initialValue: selectedToken,
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFF1E1E1E),
@@ -804,7 +804,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
         const Text('Target Network', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          value: selectedNetwork,
+          initialValue: selectedNetwork,
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFF1E1E1E),
@@ -965,7 +965,7 @@ class AdminDashboardScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

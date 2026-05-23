@@ -102,7 +102,7 @@ export const syncUserDeposits = action({
 
 export const syncDepositByHash = action({
   args: { userId: v.id("users"), txHash: v.string(), chainId: v.number() },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ success: boolean; foundNew?: number; message?: string }> => {
     return await ctx.runAction(api.etherscanActions.syncUserDeposits, { userId: args.userId });
   }
 });

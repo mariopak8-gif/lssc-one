@@ -3,14 +3,15 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { Doc, Id } from "./_generated/dataModel";
 import { Wallet } from "ethers";
 import * as crypto from "crypto";
 
 export const generateWallet = action({
   args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ _id: Id<"wallets">; address: string } | Doc<"wallets"> | null> => {
     // 1. Check if wallet already exists
-    const existing = await ctx.runQuery(api.wallets.getWallet, { userId: args.userId });
+    const existing: Doc<"wallets"> | null = await ctx.runQuery(api.wallets.getWallet, { userId: args.userId });
     if (existing) return existing;
 
     // 2. Generate new wallet using ethers
@@ -33,7 +34,7 @@ export const generateWallet = action({
     encrypted += cipher.final("hex");
 
     // 4. Store in DB via mutation
-    const walletId = await ctx.runMutation(api.wallets.createWallet, {
+    const walletId: Id<"wallets"> = await ctx.runMutation(api.wallets.createWallet, {
       userId: args.userId,
       address: wallet.address,
       encryptedPrivateKey: encrypted,
