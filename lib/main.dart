@@ -138,19 +138,19 @@ final List<Map<String, String>> carouselProducts = [
   {
     'title': 'Crypto Savings Vault',
     'subtitle': 'Earn up to 8% APY on stablecoins',
-    'image': 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=600&h=300&fit=crop',
+    'image': 'asset/1.png',
     'tag': 'Featured',
   },
   {
     'title': 'Instant Cross-Chain Bridge',
     'subtitle': 'Move assets across 10+ networks in seconds',
-    'image': 'https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=600&h=300&fit=crop',
+    'image': 'asset/2.png',
     'tag': 'New',
   },
   {
     'title': 'DeFi Yield Optimizer',
     'subtitle': 'Auto-compound returns with one click',
-    'image': 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=600&h=300&fit=crop',
+    'image': 'asset/3.png',
     'tag': 'Popular',
   },
 ];
@@ -615,7 +615,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 17.00,
         dailyIncome: 1.90,
-        imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop',
+        imageUrl: 'asset/4.png',
       ),
       BikeModel(
         id: 'blue_s1',
@@ -623,7 +623,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 57.00,
         dailyIncome: 6.30,
-        imageUrl: 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=200&h=200&fit=crop',
+        imageUrl: 'asset/5.png',
       ),
       BikeModel(
         id: 'blue_s2',
@@ -631,7 +631,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 277.00,
         dailyIncome: 31.00,
-        imageUrl: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?w=200&h=200&fit=crop',
+        imageUrl: 'asset/6.png',
       ),
       BikeModel(
         id: 'blue_s3',
@@ -639,7 +639,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 677.00,
         dailyIncome: 80.00,
-        imageUrl: 'https://images.unsplash.com/photo-1583117386995-5e72e4640a4f?w=200&h=200&fit=crop',
+        imageUrl: 'asset/7.png',
       ),
       BikeModel(
         id: 'blue_s4',
@@ -647,7 +647,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 1166.00,
         dailyIncome: 138.00,
-        imageUrl: 'https://images.unsplash.com/photo-1594969486096-6b88e6a7a3b9?w=200&h=200&fit=crop',
+        imageUrl: 'asset/8.png',
       ),
       BikeModel(
         id: 'blue_s5',
@@ -655,7 +655,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 2266.00,
         dailyIncome: 268.00,
-        imageUrl: 'https://images.unsplash.com/photo-1544161000-0183d6e3809e?w=200&h=200&fit=crop',
+        imageUrl: 'asset/9.png',
       ),
       BikeModel(
         id: 'blue_s6',
@@ -663,7 +663,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 4466.00,
         dailyIncome: 548.00,
-        imageUrl: 'https://images.unsplash.com/photo-1485871981521-9c4595b31c0c?w=200&h=200&fit=crop',
+        imageUrl: 'asset/10.png',
       ),
       BikeModel(
         id: 'blue_s7',
@@ -671,7 +671,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 7766.00,
         dailyIncome: 955.00,
-        imageUrl: 'https://images.unsplash.com/photo-1494908300279-974768797470?w=200&h=200&fit=crop',
+        imageUrl: 'asset/1.png',
       ),
       BikeModel(
         id: 'blue_s8',
@@ -679,7 +679,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 16888.00,
         dailyIncome: 2046.00,
-        imageUrl: 'https://images.unsplash.com/photo-1520521464425-753b1285b93b?w=200&h=200&fit=crop',
+        imageUrl: 'asset/2.png',
       ),
       BikeModel(
         id: 'blue_s9',
@@ -687,7 +687,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 22888.00,
         dailyIncome: 2858.00,
-        imageUrl: 'https://images.unsplash.com/photo-1566925189926-6a629091ecd6?w=200&h=200&fit=crop',
+        imageUrl: 'asset/3.png',
       ),
       BikeModel(
         id: 'blue_s10',
@@ -695,7 +695,7 @@ class _BikeScreenState extends State<BikeScreen> {
         icon: '⚡',
         equipmentPrice: 36888.00,
         dailyIncome: 4606.00,
-        imageUrl: 'https://images.unsplash.com/photo-1517649763962-0c623066013c?w=200&h=200&fit=crop',
+        imageUrl: 'asset/4.png',
       ),
     ];
   }
@@ -748,18 +748,19 @@ class _BikeScreenState extends State<BikeScreen> {
             // Grid of Bikes
             LayoutBuilder(
               builder: (context, constraints) {
-                final crossAxisCount = constraints.maxWidth > 600
-                    ? (constraints.maxWidth > 900 ? 3 : 2)
-                    : 1;
+                final crossAxisCount = constraints.maxWidth > 900
+                    ? 3
+                    : (constraints.maxWidth > 600 ? 2 : 1);
+                final childAspectRatio = crossAxisCount > 1 ? 1.5 : 3.2;
 
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: crossAxisCount == 1 ? 3.2 : (crossAxisCount == 2 ? 2.6 : 1.8),
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: childAspectRatio,
                   ),
                   itemCount: bikes.length,
                   itemBuilder: (context, index) => BikeCard(
@@ -790,25 +791,11 @@ class _BikeScreenState extends State<BikeScreen> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF00C853).withValues(alpha: 0.15),
-            const Color(0xFF00C853).withValues(alpha: 0.08),
-          ],
-        ),
+        color: const Color(0xFF1A1A1A),
         border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.4),
-          width: 1.5,
+          color: const Color(0xFF00C853).withValues(alpha: 0.25),
+          width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00C853).withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       padding: const EdgeInsets.all(20),
       child: Row(
@@ -1043,20 +1030,30 @@ class _BikeCardState extends ConsumerState<BikeCard> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF1A1A1A),
         border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.15),
-          width: 1.5,
+          color: const Color(0xFF00C853).withValues(alpha: 0.2),
+          width: 1,
         ),
       ),
+      padding: const EdgeInsets.all(14),
       child: Row(
         children: [
           _buildImage(),
-          Expanded(child: _buildDetails()),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: _buildAction(),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildDetails(),
+                const SizedBox(height: 6),
+                _buildStatsRow(),
+                const SizedBox(height: 10),
+                _buildAction(),
+              ],
+            ),
           ),
         ],
       ),
@@ -1064,16 +1061,17 @@ class _BikeCardState extends ConsumerState<BikeCard> {
   }
 
   Widget _buildImage() {
+    final isCompact = MediaQuery.of(context).size.width > 900;
+    final imgWidth = isCompact ? 80.0 : 100.0;
+    final imgHeight = isCompact ? 110.0 : 140.0;
+
     return ClipRRect(
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(16),
-        bottomLeft: Radius.circular(16),
-      ),
+      borderRadius: BorderRadius.circular(12),
       child: SizedBox(
-        width: 100,
-        height: 100,
+        width: imgWidth,
+        height: imgHeight,
         child: widget.bike.imageUrl != null
-            ? Image.network(
+            ? Image.asset(
                 widget.bike.imageUrl!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => _fallbackImage(),
@@ -1085,72 +1083,131 @@ class _BikeCardState extends ConsumerState<BikeCard> {
 
   Widget _fallbackImage() {
     return Container(
-      color: const Color(0xFF00C853).withValues(alpha: 0.1),
+      color: const Color(0xFF00C853).withValues(alpha: 0.15),
       child: Center(
-        child: Text(widget.bike.icon, style: const TextStyle(fontSize: 36)),
+        child: Text(widget.bike.icon, style: const TextStyle(fontSize: 40)),
       ),
     );
   }
 
   Widget _buildDetails() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            widget.bike.name,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.bike.name,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
-          const SizedBox(height: 4),
-          Text(
-            '\$${widget.bike.equipmentPrice.toStringAsFixed(0)}',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF00C853),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsRow() {
+    // Calculate daily income percentage based on price
+    final dailyPercentage = (widget.bike.dailyIncome / widget.bike.equipmentPrice * 100).toStringAsFixed(2);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Rate of return
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Rate of return',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[400],
+              ),
             ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            'Daily: \$${widget.bike.dailyIncome.toStringAsFixed(2)}',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              color: Colors.grey[400],
+            Text(
+              '$dailyPercentage%',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF4CAF50),
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // Invest cycle (daily income)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Invest cycle',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[400],
+              ),
+            ),
+            Text(
+              '\$${widget.bike.dailyIncome.toStringAsFixed(2)}/day',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF81C784),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // Available investments
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Available',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[400],
+              ),
+            ),
+            Text(
+              'Unlimited',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[300],
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
   Widget _buildAction() {
     if (widget.bike.isOwned) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           color: const Color(0xFF00C853).withValues(alpha: 0.1),
           border: Border.all(
-            color: const Color(0xFF00C853).withValues(alpha: 0.3),
+            color: const Color(0xFF00C853).withValues(alpha: 0.4),
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.check_circle, size: 14, color: const Color(0xFF00C853)),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               'Owned',
               style: GoogleFonts.poppins(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF00C853),
               ),
@@ -1160,53 +1217,53 @@ class _BikeCardState extends ConsumerState<BikeCard> {
       );
     }
 
-    return SizedBox(
-      width: 80,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _joinBike,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF00C853),
-          disabledBackgroundColor: Colors.grey[700],
-          foregroundColor: Colors.black,
-          padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        child: _isLoading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.black,
-                ),
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '\$${widget.bike.equipmentPrice.toStringAsFixed(0)}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    'Buy now',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
+    return Row(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '\$${widget.bike.equipmentPrice.toStringAsFixed(2)}',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF00C853),
               ),
-      ),
+            ),
+          ],
+        ),
+        const Spacer(),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _joinBike,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00C853),
+            disabledBackgroundColor: Colors.grey[700],
+            foregroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.black,
+                  ),
+                )
+              : Text(
+                  'Buy now',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }
@@ -2340,9 +2397,8 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   image: DecorationImage(
-                    image: NetworkImage(p['image']!),
+                    image: AssetImage(p['image']!),
                     fit: BoxFit.cover,
-                    onError: (_, __) {},
                   ),
                 ),
                 child: Container(
