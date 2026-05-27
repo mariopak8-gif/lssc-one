@@ -31,6 +31,10 @@ class ApiService {
     });
   }
 
+  Future<Response> checkReferralCode(String code) async {
+    return await _dio.get('/run/users:checkReferralCode', queryParameters: {'code': code});
+  }
+
   Future<Response> register({
     required String email,
     required String password,
@@ -44,8 +48,6 @@ class ApiService {
       'invitationCode': invitationCode,
     };
 
-    data.removeWhere((key, value) => value == null);
-
     return await _dio.post('/mutation/users:register', data: data);
   }
 
@@ -57,6 +59,24 @@ class ApiService {
 
   Future<Response> getUser(String userId) async {
     return await _dio.get('/run/users:getUser', queryParameters: {'userId': userId});
+  }
+
+  // --- Referral Methods ---
+
+  Future<Response> getReferralStats(String userId) async {
+    return await _dio.get('/run/referrals:getTeamStats', queryParameters: {'userId': userId});
+  }
+
+  Future<Response> getTeamMembers(String userId) async {
+    return await _dio.get('/run/referrals:getTeamMembers', queryParameters: {'userId': userId});
+  }
+
+  Future<Response> getReferralEarnings(String userId) async {
+    return await _dio.get('/run/referrals:getReferralEarningsHistory', queryParameters: {'userId': userId});
+  }
+
+  Future<Response> getLeaderboard() async {
+    return await _dio.get('/run/referrals:getLeaderboard');
   }
 
   // --- Admin Methods ---
@@ -76,6 +96,18 @@ class ApiService {
     return await _dio.get('/run/admin:getStats');
   }
 
+  Future<Response> getPendingWithdrawals() async {
+    return await _dio.get('/run/admin:getPendingWithdrawals');
+  }
+
+  Future<Response> processWithdrawal(String withdrawalId) async {
+    return await _dio.post('/action/withdrawalActions:processWithdrawal', data: {'withdrawalId': withdrawalId});
+  }
+
+  Future<Response> processAllWithdrawals() async {
+    return await _dio.post('/action/withdrawalActions:processAllPending');
+  }
+
   // --- Data Methods ---
 
   Future<Response> getBalance(String userId) async {
@@ -84,6 +116,10 @@ class ApiService {
 
   Future<Response> getTransactions(String userId) async {
     return await _dio.get('/run/deposits:listDeposits', queryParameters: {'userId': userId});
+  }
+
+  Future<Response> getWithdrawals(String userId) async {
+    return await _dio.get('/run/withdrawals:getWithdrawals', queryParameters: {'userId': userId});
   }
 
   Future<Response> requestWithdrawal(Map<String, dynamic> data) async {

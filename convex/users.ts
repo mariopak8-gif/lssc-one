@@ -1,5 +1,6 @@
 import { mutation, query, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Verifies a Google ID Token using Google's TokenInfo API
@@ -24,6 +25,29 @@ async function generateInviteCode(ctx: MutationCtx): Promise<string> {
   throw new Error("Could not generate unique invite code");
 }
 
+function generateReferralCode() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+export const checkReferralCode = query({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    if (!args.code || args.code.trim() === "") return { isValid: false };
+    const inviter = await ctx.db
+      .query("users")
+      .withIndex("by_referralCode", (q) => q.eq("referralCode", args.code))
+      .unique();
+    return { 
+      isValid: !!inviter,
+      username: inviter?.username || inviter?.email.split('@')[0]
+    };
+  },
+});
 export const loginWithGoogle = mutation({
   args: { 
     idToken: v.string(),
@@ -65,6 +89,7 @@ export const register = mutation({
     transactionPassword: v.string(),
     invitationCode: v.optional(v.string()),
     googleId: v.optional(v.string()),
+    username: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -74,14 +99,40 @@ export const register = mutation({
 
     if (existing) throw new Error("User already exists");
 
-    const myCode = await generateInviteCode(ctx);
+    const myInviteCode = await generateInviteCode(ctx);
+
+    let referredBy: Id<"users"> | undefined;
+    if (args.invitationCode && args.invitationCode.trim() !== "") {
+      const inviter = await ctx.db
+        .query("users")
+        .withIndex("by_referralCode", (q) => q.eq("referralCode", args.invitationCode))
+        .unique();
+      if (!inviter) {
+        throw new Error("Invalid invitation code. Please provide a valid referral code to continue.");
+      }
+      referredBy = inviter._id;
+    }
+
+    let myReferralCode = generateReferralCode();
+    let codeExists = await ctx.db.query("users").withIndex("by_referralCode", q => q.eq("referralCode", myReferralCode)).unique();
+    while (codeExists) {
+      myReferralCode = generateReferralCode();
+      codeExists = await ctx.db.query("users").withIndex("by_referralCode", q => q.eq("referralCode", myReferralCode)).unique();
+    }
 
     const userId = await ctx.db.insert("users", {
+      username: args.username,
       email: args.email,
       password: args.password ?? "GOOGLE_AUTH",
       transactionPassword: args.transactionPassword,
       invitationCode: args.invitationCode ?? "",
-      myInviteCode: myCode,
+      myInviteCode: myInviteCode,
+      referralCode: myReferralCode,
+      referralLink: `https://myapp.com/register?ref=${myReferralCode}`,
+      referredBy: referredBy,
+      referralBalance: 0,
+      totalReferralEarnings: 0,
+      teamSize: 0,
       role: "user", 
       externalId: args.googleId,
       emailVerified: args.googleId ? true : false,
@@ -90,61 +141,35 @@ export const register = mutation({
       teamRewardsTotalEarned: "0",
     });
 
-    // Build referral tree from invitation code
-    const inviteCode = args.invitationCode ?? "";
-    if (inviteCode.trim().length > 0) {
-      const code = inviteCode.trim();
-      // Look up inviter by 5-digit code first, fall back to email
-      let inviter = await ctx.db
-        .query("users")
-        .withIndex("by_inviteCode", (q) => q.eq("myInviteCode", code))
-        .unique();
+    if (referredBy) {
+      await ctx.db.insert("referralTree", {
+        userId: userId,
+        parentId: referredBy,
+        level: 1,
+        createdAt: Date.now()
+      });
+      const parent = await ctx.db.get(referredBy);
+      if (parent) await ctx.db.patch(referredBy, { teamSize: (parent.teamSize || 0) + 1 });
 
-      if (!inviter) {
-        inviter = await ctx.db
-          .query("users")
-          .withIndex("by_email", (q) => q.eq("email", code))
-          .unique();
-      }
-
-      if (inviter) {
-        const now = Date.now();
-        // Tier 1 (Team A) — direct inviter
+      if (parent?.referredBy) {
         await ctx.db.insert("referralTree", {
-          referrerId: inviter._id,
-          referredId: userId,
-          tier: 1,
-          createdAt: now,
+          userId: userId,
+          parentId: parent.referredBy,
+          level: 2,
+          createdAt: Date.now()
         });
+        const grandParent = await ctx.db.get(parent.referredBy);
+        if (grandParent) await ctx.db.patch(parent.referredBy, { teamSize: (grandParent.teamSize || 0) + 1 });
 
-        // Find Tier 2 (Team B) — inviter's inviter
-        const tier1Links = await ctx.db
-          .query("referralTree")
-          .withIndex("by_referred", (q) => q.eq("referredId", inviter._id))
-          .collect();
-
-        if (tier1Links.length > 0) {
+        if (grandParent?.referredBy) {
           await ctx.db.insert("referralTree", {
-            referrerId: tier1Links[0].referrerId,
-            referredId: userId,
-            tier: 2,
-            createdAt: now,
+            userId: userId,
+            parentId: grandParent.referredBy,
+            level: 3,
+            createdAt: Date.now()
           });
-
-          // Find Tier 3 (Team C) — inviter's inviter's inviter
-          const tier2Links = await ctx.db
-            .query("referralTree")
-            .withIndex("by_referred", (q) => q.eq("referredId", tier1Links[0].referrerId))
-            .collect();
-
-          if (tier2Links.length > 0) {
-            await ctx.db.insert("referralTree", {
-              referrerId: tier2Links[0].referrerId,
-              referredId: userId,
-              tier: 3,
-              createdAt: now,
-            });
-          }
+          const greatGrandParent = await ctx.db.get(grandParent.referredBy);
+          if (greatGrandParent) await ctx.db.patch(grandParent.referredBy, { teamSize: (greatGrandParent.teamSize || 0) + 1 });
         }
       }
     }
@@ -182,11 +207,18 @@ export const getUser = query({
     return {
       _id: user._id,
       email: user.email,
+      username: user.username,
+      referralCode: user.referralCode,
+      referralLink: user.referralLink,
+      referralBalance: user.referralBalance,
+      totalReferralEarnings: user.totalReferralEarnings,
+      teamSize: user.teamSize,
       role: user.role ?? "user",
       emailVerified: user.emailVerified,
       teamRewardsBalance: user.teamRewardsBalance ?? "0",
       teamRewardsTotalEarned: user.teamRewardsTotalEarned ?? "0",
       myInviteCode: user.myInviteCode,
+      createdAt: user.createdAt,
     };
   },
 });
@@ -234,13 +266,8 @@ export const makeAdmin = mutation({
 });
 
 export const verifyEmail = mutation({
-  args: { email: v.string() },
+  args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
-    if (!user) throw new Error("User not found");
-    await ctx.db.patch(user._id, { emailVerified: true });
+    await ctx.db.patch(args.userId, { emailVerified: true });
   },
 });

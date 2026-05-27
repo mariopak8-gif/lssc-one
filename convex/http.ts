@@ -31,10 +31,12 @@ http.route({ path: "/run/users:listUsers", method: "OPTIONS", handler: httpActio
 http.route({ path: "/mutation/users:setRole", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/users:loginWithGoogle", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/users:verifyEmail", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/users:checkReferralCode", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/wallets:getWallet", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/action/walletActions:generateWallet", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/balances:getTotalUsdtBalance", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/deposits:listDeposits", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/withdrawals:getWithdrawals", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/withdrawals:requestWithdrawal", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/action/etherscanActions:syncUserDeposits", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/admin:getStats", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
@@ -44,6 +46,16 @@ http.route({ path: "/mutation/users:requestPasswordReset", method: "OPTIONS", ha
 http.route({ path: "/mutation/users:resetPassword", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/users:requestTransactionPasswordReset", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/users:resetTransactionPassword", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+
+// Withdrawal Action OPTIONS
+http.route({ path: "/action/withdrawalActions:processWithdrawal", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/action/withdrawalActions:processAllPending", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+
+// Referral OPTIONS
+http.route({ path: "/run/referrals:getTeamStats", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/referrals:getTeamMembers", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/referrals:getReferralEarningsHistory", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/run/referrals:getLeaderboard", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 
 // --- Auth Routes ---
 
@@ -76,14 +88,34 @@ http.route({
 });
 
 http.route({
+  path: "/run/users:checkReferralCode",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const code = searchParams.get("code");
+      if (!code) return jsonResponse("Missing code", 400);
+      const result = await ctx.runQuery(api.users.checkReferralCode, { code });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
   path: "/run/users:getUser",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    if (!userId) return jsonResponse("Missing userId", 400);
-    const result = await ctx.runQuery(api.users.getUser, { userId: userId as any });
-    return jsonResponse(result);
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+      const result = await ctx.runQuery(api.users.getUser, { userId: userId as any });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
@@ -91,8 +123,12 @@ http.route({
   path: "/run/users:listUsers",
   method: "GET",
   handler: httpAction(async (ctx) => {
-    const result = await ctx.runQuery(api.users.listUsers);
-    return jsonResponse(result);
+    try {
+      const result = await ctx.runQuery(api.users.listUsers);
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
@@ -100,9 +136,13 @@ http.route({
   path: "/mutation/users:setRole",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const body = await request.json();
-    await ctx.runMutation(api.users.setRole, body);
-    return jsonResponse({ success: true });
+    try {
+      const body = await request.json();
+      await ctx.runMutation(api.users.setRole, body);
+      return jsonResponse({ success: true });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
@@ -124,9 +164,13 @@ http.route({
   path: "/mutation/users:verifyEmail",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const body = await request.json();
-    await ctx.runMutation(api.users.verifyEmail, body);
-    return new Response(null, { status: 200, headers: CORS_HEADERS });
+    try {
+      const body = await request.json();
+      await ctx.runMutation(api.users.verifyEmail, body);
+      return new Response(null, { status: 200, headers: CORS_HEADERS });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
@@ -196,12 +240,16 @@ http.route({
   path: "/run/wallets:getWallet",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    if (!userId) return jsonResponse("Missing userId", 400);
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
 
-    const wallet = await ctx.runQuery(api.wallets.getWallet, { userId: userId as any });
-    return jsonResponse(wallet);
+      const wallet = await ctx.runQuery(api.wallets.getWallet, { userId: userId as any });
+      return jsonResponse(wallet);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
@@ -225,12 +273,16 @@ http.route({
   path: "/run/balances:getTotalUsdtBalance",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    if (!userId) return jsonResponse("Missing userId", 400);
-    
-    const balance = await ctx.runQuery(api.balances.getTotalUsdtBalance, { userId: userId as any });
-    return jsonResponse({ balance });
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+      
+      const balance = await ctx.runQuery(api.balances.getTotalUsdtBalance, { userId: userId as any });
+      return jsonResponse({ balance });
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
@@ -238,12 +290,33 @@ http.route({
   path: "/run/deposits:listDeposits",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    if (!userId) return jsonResponse("Missing userId", 400);
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
 
-    const deposits = await ctx.runQuery(api.deposits.listDeposits, { userId: userId as any });
-    return jsonResponse(deposits);
+      const deposits = await ctx.runQuery(api.deposits.listDeposits, { userId: userId as any });
+      return jsonResponse(deposits);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/run/withdrawals:getWithdrawals",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+
+      const result = await ctx.runQuery(api.withdrawals.getWithdrawals, { userId: userId as any });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
@@ -275,12 +348,111 @@ http.route({
   }),
 });
 
+// --- Withdrawal Actions ---
+
+http.route({
+  path: "/action/withdrawalActions:processWithdrawal",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      const result = await ctx.runAction(api.withdrawalActions.processWithdrawal, body);
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/action/withdrawalActions:processAllPending",
+  method: "POST",
+  handler: httpAction(async (ctx) => {
+    try {
+      // Note: We mapped this to adminActions.processAllPending if it was moved
+      // But for backward compatibility with Dart code, we keep the path.
+      // If you moved it to adminActions, use api.adminActions.processAllPending here.
+      const result = await ctx.runAction((api as any).adminActions.processAllPending);
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
 http.route({
   path: "/run/admin:getStats",
   method: "GET",
   handler: httpAction(async (ctx) => {
-    const result = await ctx.runQuery(api.admin.getStats);
-    return jsonResponse(result);
+    try {
+      const result = await ctx.runQuery(api.admin.getStats);
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+// --- Referral Routes ---
+
+http.route({
+  path: "/run/referrals:getTeamStats",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+      const result = await ctx.runQuery(api.referrals.getTeamStats, { userId: userId as any });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/run/referrals:getTeamMembers",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+      const result = await ctx.runQuery(api.referrals.getTeamMembers, { userId: userId as any });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/run/referrals:getReferralEarningsHistory",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const userId = searchParams.get("userId");
+      if (!userId) return jsonResponse("Missing userId", 400);
+      const result = await ctx.runQuery(api.referrals.getReferralEarningsHistory, { userId: userId as any });
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/run/referrals:getLeaderboard",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    try {
+      const result = await ctx.runQuery(api.referrals.getLeaderboard);
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
   }),
 });
 
