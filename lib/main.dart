@@ -430,28 +430,34 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
   }
 
   Widget _buildStatItemSmall(IconData icon, String label, String value) {
-    return Column(
-      children: [
-        Icon(icon, size: 20, color: const Color(0xFF00C853)),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[400],
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFF00C853)),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[400],
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF00C853),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF00C853),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -479,7 +485,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
   Widget _buildEmptyProducts() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(40),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -601,25 +607,31 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
   }
 
   Widget _buildSmallStat(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF00C853),
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF00C853),
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 11,
-            color: Colors.grey[500],
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: Colors.grey[500],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1294,28 +1306,34 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
     required String label,
     required String value,
   }) {
-    return Column(
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 24)),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[400],
+    return Expanded(
+      child: Column(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 24)),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[400],
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF00C853),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF00C853),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1676,14 +1694,19 @@ class _BikeCardState extends ConsumerState<BikeCard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Rate of return',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[400],
+            Expanded(
+              child: Text(
+                'Rate of return',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[400],
+                ),
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               '$dailyPercentage%',
               style: GoogleFonts.poppins(
@@ -1699,14 +1722,19 @@ class _BikeCardState extends ConsumerState<BikeCard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Invest cycle',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[400],
+            Expanded(
+              child: Text(
+                'Invest cycle',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[400],
+                ),
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               '\$${widget.bike.dailyIncome.toStringAsFixed(2)}/day',
               style: GoogleFonts.poppins(
@@ -2275,9 +2303,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       child: const Text('Forgot Password?', style: TextStyle(color: Colors.white38)),
                     ),
                   const SizedBox(height: 4),
-                  TextButton(
-                    onPressed: () => setState(() => _isLogin = !_isLogin),
-                    child: Text(_isLogin ? "Don't have an account? Register" : "Already have an account? Login", style: const TextStyle(color: Colors.greenAccent)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: TextButton(
+                      onPressed: () => setState(() => _isLogin = !_isLogin),
+                      child: Text(_isLogin ? "Don't have an account? Register" : "Already have an account? Login", style: const TextStyle(color: Colors.greenAccent)),
+                    ),
                   ),
                 ],
               ),
@@ -2317,7 +2348,7 @@ class VerifyEmailScreen extends ConsumerWidget {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(40.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -2336,7 +2367,7 @@ class VerifyEmailScreen extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.greenAccent,
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                 ),
                 child: const Text('I\'ve Verified (Simulate)'),
               ),
@@ -2847,7 +2878,7 @@ class _ResetTransactionPasswordScreenState extends ConsumerState<ResetTransactio
                       ),
                       child: _isLoading
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                          : const Text('Reset Transaction Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          : const Text('Reset Transaction Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     ),
                   ],
                 ],
@@ -3209,7 +3240,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: Column(
             children: [
               const _ImageCarousel(),
@@ -3235,7 +3266,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const _VideoExplainer(),
               const SizedBox(height: 32),
               const _OurProductSection(),
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
               const _RecentActivityHeader(),
               const SizedBox(height: 20),
               activityAsync.when(
@@ -3288,7 +3319,9 @@ class _PortfolioCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total Stablecoin Balance', style: TextStyle(color: Colors.white70, fontSize: 14, letterSpacing: 1)),
+              Flexible(
+                child: Text('Total Stablecoin Balance', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 14, letterSpacing: 1)),
+              ),
               if (isAdmin)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -3808,7 +3841,9 @@ class _RecentActivityHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text('Recent Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Flexible(
+          child: Text('Recent Activity', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
         TextButton(onPressed: () {}, child: const Text('See All', style: TextStyle(color: Colors.greenAccent))),
       ],
     );
@@ -4619,13 +4654,14 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(r'Min: $2.00', style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-              Row(
-                children: [
-                  const Text('Available ', style: TextStyle(color: Colors.white38, fontSize: 11)),
-                  isLoading 
-                    ? const SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Text('\$${displayBalance.toStringAsFixed(2)} $selectedToken', style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                ],
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Available \$${isLoading ? '...' : displayBalance.toStringAsFixed(2)} $selectedToken',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),

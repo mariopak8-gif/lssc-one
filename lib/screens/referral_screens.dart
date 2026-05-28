@@ -93,8 +93,9 @@ class _EarningsOverviewCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildSmallStat('Today Earnings', '\$${stats.todayEarnings.toStringAsFixed(2)}'),
-              _buildSmallStat('Total Earnings', '\$${stats.totalReferralEarnings.toStringAsFixed(2)}'),
+              Expanded(child: _buildSmallStat('Today Earnings', '\$${stats.todayEarnings.toStringAsFixed(2)}')),
+              const SizedBox(width: 12),
+              Expanded(child: _buildSmallStat('Total Earnings', '\$${stats.totalReferralEarnings.toStringAsFixed(2)}')),
             ],
           ),
         ],
@@ -106,8 +107,8 @@ class _EarningsOverviewCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -151,7 +152,7 @@ class _TeamStatsGrid extends StatelessWidget {
             children: [
               Icon(icon, size: 14, color: color),
               const SizedBox(width: 8),
-              Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 11))),
             ],
           ),
           const SizedBox(height: 8),
@@ -289,7 +290,7 @@ class _TeamListView extends StatelessWidget {
   Widget build(BuildContext context) {
     if (members.isEmpty) {
       return Center(child: Padding(
-        padding: const EdgeInsets.all(40.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
         child: Text(emptyMessage, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38)),
       ));
     }
