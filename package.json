@@ -1,7 +1,7 @@
 {
   "name": "depositsystem-backend",
   "version": "1.0.0",
-  "description": "Backend services and Convex functions for CryptoVault Pro",
+  "description": "Backend services and Convex functions for LSSC ONE",
   "main": "index.js",
   "scripts": {
     "dev": "flutter run -d chrome",

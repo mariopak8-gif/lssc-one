@@ -29,7 +29,7 @@ import 'components/app_card.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
-  runApp(const ProviderScope(child: CryptoVaultApp()));
+  runApp(const ProviderScope(child: LSSCONEApp()));
 }
 
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -107,15 +107,15 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class CryptoVaultApp extends ConsumerWidget {
-  const CryptoVaultApp({super.key});
+class LSSCONEApp extends ConsumerWidget {
+  const LSSCONEApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
-      title: 'CryptoVault Pro',
+      title: 'LSSC ONE',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       routerConfig: router,
@@ -2566,10 +2566,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.shield_rounded, size: 70, color: AppColors.primary),
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        image: DecorationImage(
+                          image: AssetImage('asset/logo.png'),
+                          fit: BoxFit.contain,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.shadowGreen.withValues(alpha: 0.3),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                    ),
                     AppSpacing.hLg,
                     Text(
-                      'CryptoVault Pro',
+                      'LSSC ONE',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.orbitron(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
@@ -3279,7 +3296,7 @@ void _showWelcomeModal(BuildContext context, String? email) {
             child: Column(
               children: [
                 Text(
-                  'Welcome to CryptoVault Pro! 🚀',
+                  'Welcome to LSSC ONE! 🚀',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -4119,7 +4136,7 @@ class _VideoExplainer extends StatelessWidget {
                   children: [
                     Icon(Icons.play_circle_fill, size: 64, color: AppColors.primary),
                     AppSpacing.hMd,
-                    Text('Watch: How CryptoVault Protects Your Assets',
+                    Text('Watch: How LSSC ONEtects Your Assets',
                       style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textPrimary.withValues(alpha: 0.8)),
                       textAlign: TextAlign.center,
                     ),
@@ -4170,7 +4187,7 @@ class _OurProductSection extends StatelessWidget {
               ),
               AppSpacing.wMd,
               Expanded(
-                child: Text('How CryptoVault Helps', style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700)),
+                child: Text('How LSSC ONE Helps', style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -5320,8 +5337,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _shareInviteLink() {
     final link = _inviteLink;
     Share.share(
-      'Join me on CryptoVault Pro! Use my invitation link: $link',
-      subject: 'Join me on CryptoVault Pro',
+      'Join me on LSSC ONE! Use my invitation link: $link',
+      subject: 'Join me on LSSC ONE',
     );
   }
 

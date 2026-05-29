@@ -7,12 +7,12 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       const ProviderScope(
-        child: CryptoVaultApp(),
+        child: LSSCONEApp(),
       ),
     );
 
     // Verify that we are on the login screen.
-    expect(find.text('CryptoVault Pro'), findsOneWidget);
+    expect(find.text('LSSC ONE'), findsOneWidget);
     expect(find.text('Access Wallet'), findsOneWidget);
   });
 }

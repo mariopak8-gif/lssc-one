@@ -71,7 +71,7 @@ for (const [chainId, net] of Object.entries(ALL_NETWORKS)) {
 }
 
 export async function processWithdrawals() {
-  console.log("--- CryptoVault Multi-Token Withdrawal Processor Starting ---");
+  console.log("--- LSSC ONE Multi-Token Withdrawal Processor Starting ---");
   console.log("Scanning for pending withdrawals every 15 seconds...");
 
   while (true) {
