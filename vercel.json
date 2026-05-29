@@ -1,4 +1,4 @@
 {
-  "buildCommand": "pnpm run web:build",
-  "outputDirectory": "build/web"
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist"
 }
