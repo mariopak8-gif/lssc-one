@@ -44,6 +44,7 @@ http.route({ path: "/run/networks:getActiveNetworks", method: "OPTIONS", handler
 http.route({ path: "/run/teams:getTeamStats", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/bikes:getUserPurchases", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/bikes:buyBike", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
+http.route({ path: "/mutation/bikes:claimDailyEarnings", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/users:requestPasswordReset", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/users:resetPassword", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/mutation/users:requestTransactionPasswordReset", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
@@ -58,7 +59,6 @@ http.route({ path: "/run/referrals:getTeamStats", method: "OPTIONS", handler: ht
 http.route({ path: "/run/referrals:getTeamMembers", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/referrals:getReferralEarningsHistory", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/referrals:getLeaderboard", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
-http.route({ path: "/run/networks:getActiveNetworks", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/networks:getAllNetworks", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 
 // --- Auth Routes ---
@@ -513,19 +513,6 @@ http.route({
 });
 
 http.route({
-  path: "/run/networks:getActiveNetworks",
-  method: "GET",
-  handler: httpAction(async (ctx) => {
-    try {
-      const result = await ctx.runQuery(api.networks.getActiveNetworks);
-      return jsonResponse(result);
-    } catch (e: any) {
-      return jsonResponse(e.message, 400);
-    }
-  }),
-});
-
-http.route({
   path: "/run/teams:getTeamStats",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
@@ -545,6 +532,20 @@ http.route({
     const body = await request.json();
     try {
       const result = await ctx.runMutation(api.bikes.buyBike, body);
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse(e.message, 400);
+    }
+  }),
+});
+
+http.route({
+  path: "/mutation/bikes:claimDailyEarnings",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.json();
+    try {
+      const result = await ctx.runMutation(api.bikes.claimDailyEarnings, body);
       return jsonResponse(result);
     } catch (e: any) {
       return jsonResponse(e.message, 400);

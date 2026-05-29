@@ -7,6 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/referral_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/referral.dart';
+import '../theme/app_colors.dart';
+import '../components/app_button.dart';
+import '../components/app_card.dart';
 
 class ReferralDashboardScreen extends ConsumerWidget {
   const ReferralDashboardScreen({super.key});
@@ -27,24 +30,39 @@ class ReferralDashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              statsAsync.when(
-                data: (stats) => _EarningsOverviewCard(stats: stats),
-                loading: () => const _LoadingCard(),
-                error: (e, s) => Center(child: Text('Error: $e')),
+              AnimatedEntry(
+                delay: 0,
+                child: statsAsync.when(
+                  data: (stats) => _EarningsOverviewCard(stats: stats),
+                  loading: () => const _LoadingCard(),
+                  error: (e, s) => Center(child: Text('Error: $e')),
+                ),
               ),
-              const SizedBox(height: 25),
-              _buildQuickActions(context),
-              const SizedBox(height: 30),
-              Text('TEAM STATISTICS', style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white54)),
-              const SizedBox(height: 15),
-              statsAsync.when(
-                data: (stats) => _TeamStatsGrid(stats: stats),
-                loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-                error: (e, s) => const SizedBox(),
+              AppSpacing.hXxxl,
+              AnimatedEntry(
+                delay: 80,
+                child: _buildQuickActions(context),
               ),
-              const SizedBox(height: 30),
-              const _ReferralCodeCard(),
-              const SizedBox(height: 30),
+              AppSpacing.hXxxl,
+              AnimatedEntry(
+                delay: 160,
+                child: Text('TEAM STATISTICS', style: GoogleFonts.orbitron(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textTertiary)),
+              ),
+              AppSpacing.hLg,
+              AnimatedEntry(
+                delay: 200,
+                child: statsAsync.when(
+                  data: (stats) => _TeamStatsGrid(stats: stats),
+                  loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
+                  error: (e, s) => const SizedBox(),
+                ),
+              ),
+              AppSpacing.hXxxl,
+              AnimatedEntry(
+                delay: 280,
+                child: const _ReferralCodeCard(),
+              ),
+              AppSpacing.hXxxl,
             ],
           ),
         ),
@@ -55,11 +73,11 @@ class ReferralDashboardScreen extends ConsumerWidget {
   Widget _buildQuickActions(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _ActionCard(icon: Icons.people_outline, label: 'My Team', color: Colors.blueAccent, onTap: () => context.push('/referrals/team'))),
-        const SizedBox(width: 15),
-        Expanded(child: _ActionCard(icon: Icons.history_edu_outlined, label: 'Earnings', color: Colors.purpleAccent, onTap: () => context.push('/referrals/earnings'))),
-        const SizedBox(width: 15),
-        Expanded(child: _ActionCard(icon: Icons.leaderboard_outlined, label: 'Leaders', color: Colors.orangeAccent, onTap: () => context.push('/referrals/leaderboard'))),
+        Expanded(child: _ActionCard(icon: Icons.people_outline, label: 'My Team', color: AppColors.accentBlue, onTap: () => context.push('/referrals/team'))),
+        AppSpacing.wLg,
+        Expanded(child: _ActionCard(icon: Icons.history_edu_outlined, label: 'Earnings', color: AppColors.accentPurple, onTap: () => context.push('/referrals/earnings'))),
+        AppSpacing.wLg,
+        Expanded(child: _ActionCard(icon: Icons.leaderboard_outlined, label: 'Leaders', color: AppColors.warning, onTap: () => context.push('/referrals/leaderboard'))),
       ],
     );
   }
@@ -76,25 +94,21 @@ class _EarningsOverviewCard extends StatelessWidget {
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [BoxShadow(color: Colors.blueAccent.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 10))],
+        gradient: AppGradients.referral,
+        boxShadow: [BoxShadow(color: AppColors.shadowBlue, blurRadius: 20, offset: const Offset(0, 10))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Referral Wallet Balance', style: TextStyle(color: Colors.white70, fontSize: 13, letterSpacing: 1)),
-          const SizedBox(height: 8),
+          AppSpacing.hSm,
           Text('\$${stats.referralBalance.toStringAsFixed(2)}', style: GoogleFonts.orbitron(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 20),
+          AppSpacing.hXl,
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(child: _buildSmallStat('Today Earnings', '\$${stats.todayEarnings.toStringAsFixed(2)}')),
-              const SizedBox(width: 12),
+              AppSpacing.wMd,
               Expanded(child: _buildSmallStat('Total Earnings', '\$${stats.totalReferralEarnings.toStringAsFixed(2)}')),
             ],
           ),
@@ -108,7 +122,7 @@ class _EarningsOverviewCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -129,21 +143,17 @@ class _TeamStatsGrid extends StatelessWidget {
       crossAxisSpacing: 15,
       children: [
         _buildStatTile('Total Team', stats.totalTeamMembers.toString(), Icons.group),
-        _buildStatTile('Active Members', stats.activeMembers.toString(), Icons.bolt, color: Colors.greenAccent),
-        _buildStatTile('Team Deposits', '\$${stats.totalTeamDeposit.toStringAsFixed(0)}', Icons.arrow_downward, color: Colors.greenAccent),
-        _buildStatTile('Team Withdraws', '\$${stats.totalTeamWithdraw.toStringAsFixed(0)}', Icons.arrow_upward, color: Colors.orangeAccent),
+        _buildStatTile('Active Members', stats.activeMembers.toString(), Icons.bolt, color: AppColors.success),
+        _buildStatTile('Team Deposits', '\$${stats.totalTeamDeposit.toStringAsFixed(0)}', Icons.arrow_downward, color: AppColors.success),
+        _buildStatTile('Team Withdraws', '\$${stats.totalTeamWithdraw.toStringAsFixed(0)}', Icons.arrow_upward, color: AppColors.warning),
       ],
     );
   }
 
-  Widget _buildStatTile(String label, String value, IconData icon, {Color color = Colors.blueAccent}) {
-    return Container(
+  Widget _buildStatTile(String label, String value, IconData icon, {Color color = AppColors.accentBlue}) {
+    return AppCard(
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
+      borderRadius: 20,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -151,12 +161,12 @@ class _TeamStatsGrid extends StatelessWidget {
           Row(
             children: [
               Icon(icon, size: 14, color: color),
-              const SizedBox(width: 8),
-              Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 11))),
+              AppSpacing.wSm,
+              Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(color: AppColors.textTertiary, fontSize: 11))),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          AppSpacing.hSm,
+          Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -172,35 +182,26 @@ class _ReferralCodeCard extends ConsumerWidget {
     final String code = authState.referralCode ?? "---"; 
     final String link = authState.referralLink ?? "https://cryptovault.com/register?ref=$code";
 
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.1)),
-      ),
+      borderRadius: 25,
+      borderColor: AppColors.overlayGreenMedium,
       child: Column(
         children: [
-          const Text('INVITE FRIENDS', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
-          const SizedBox(height: 20),
+          Text('INVITE FRIENDS', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, letterSpacing: 1)),
+          AppSpacing.hXl,
           _buildCopyField('Referral Code', code, context),
-          const SizedBox(height: 15),
+          AppSpacing.hLg,
           _buildCopyField('Invitation Link', link, context),
-          const SizedBox(height: 25),
+          AppSpacing.hXxxl,
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: AppPrimaryButton(
+              label: 'Share Invitation',
+              icon: Icons.share,
               onPressed: code == "---" ? null : () {
                 Share.share("Join me on CryptoVault! Use my code $code to get bonuses. Register here: $link");
               },
-              icon: const Icon(Icons.share),
-              label: const Text('Share Invitation'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.greenAccent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              ),
             ),
           ),
         ],
@@ -212,21 +213,21 @@ class _ReferralCodeCard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 11)),
-        const SizedBox(height: 5),
+        Text(label, style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 11)),
+        AppSpacing.hXs,
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-          decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: AppColors.textMuted.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
           child: Row(
             children: [
-              Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
-              const SizedBox(width: 10),
+              Expanded(child: Text(value, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+              AppSpacing.wMd,
               InkWell(
                 onTap: value == "---" ? null : () {
                   Clipboard.setData(ClipboardData(text: value));
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label copied!')));
                 },
-                child: const Icon(Icons.copy, size: 18, color: Colors.greenAccent),
+                child: Icon(Icons.copy, size: 18, color: AppColors.primary),
               ),
             ],
           ),
@@ -249,9 +250,6 @@ class TeamMembersScreen extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('MY TEAM'),
           bottom: const TabBar(
-            indicatorColor: Colors.greenAccent,
-            labelColor: Colors.greenAccent,
-            unselectedLabelColor: Colors.white54,
             tabs: [
               Tab(text: 'Team A'),
               Tab(text: 'Team B'),
@@ -291,7 +289,7 @@ class _TeamListView extends StatelessWidget {
     if (members.isEmpty) {
       return Center(child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Text(emptyMessage, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38)),
+        child: Text(emptyMessage, textAlign: TextAlign.center, style: GoogleFonts.poppins(color: AppColors.textMuted)),
       ));
     }
     return ListView.builder(
@@ -299,7 +297,10 @@ class _TeamListView extends StatelessWidget {
       itemCount: members.length,
       itemBuilder: (context, index) {
         final member = members[index];
-        return _TeamMemberTile(member: member);
+        return AnimatedScaleIn(
+          delay: index * 30,
+          child: _TeamMemberTile(member: member),
+        );
       },
     );
   }
@@ -311,13 +312,10 @@ class _TeamMemberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(20),
-      ),
+      borderRadius: 20,
       child: Row(
         children: [
           CircleAvatar(
@@ -327,21 +325,21 @@ class _TeamMemberTile extends StatelessWidget {
               style: TextStyle(color: _getLevelColor(member.level), fontWeight: FontWeight.bold, fontSize: 12)
             ),
           ),
-          const SizedBox(width: 15),
+          AppSpacing.wLg,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(member.username, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(member.email, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                Text(member.username, style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                Text(member.email, style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 12)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('\$${member.depositAmount.toStringAsFixed(0)}', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
-              const Text('Deposit', style: TextStyle(color: Colors.white38, fontSize: 10)),
+              Text('\$${member.depositAmount.toStringAsFixed(0)}', style: GoogleFonts.poppins(color: AppColors.success, fontWeight: FontWeight.bold)),
+              Text('Deposit', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 10)),
             ],
           ),
         ],
@@ -350,9 +348,9 @@ class _TeamMemberTile extends StatelessWidget {
   }
 
   Color _getLevelColor(int level) {
-    if (level == 1) return Colors.greenAccent;
-    if (level == 2) return Colors.blueAccent;
-    return Colors.purpleAccent;
+    if (level == 1) return AppColors.success;
+    if (level == 2) return AppColors.accentBlue;
+    return AppColors.accentPurple;
   }
 
   String _getLevelLabel(int level) {
@@ -373,13 +371,16 @@ class ReferralEarningsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('EARNING HISTORY')),
       body: earningsAsync.when(
         data: (earnings) {
-          if (earnings.isEmpty) return const Center(child: Text('No earnings yet.'));
+          if (earnings.isEmpty) return Center(child: Text('No earnings yet.', style: GoogleFonts.poppins(color: AppColors.textMuted)));
           return ListView.builder(
             padding: const EdgeInsets.all(20),
             itemCount: earnings.length,
             itemBuilder: (context, index) {
               final item = earnings[index];
-              return _EarningTile(item: item);
+              return AnimatedScaleIn(
+                delay: index * 30,
+                child: _EarningTile(item: item),
+              );
             },
           );
         },
@@ -396,28 +397,25 @@ class _EarningTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(15),
-      ),
+      borderRadius: 15,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Level ${item.level} Commission', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              Text('From ${item.fromUsername}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              Text('Level ${item.level} Commission', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14)),
+              Text('From ${item.fromUsername}', style: GoogleFonts.poppins(color: AppColors.textTertiary, fontSize: 12)),
             ],
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('+\$${item.commissionAmount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 16)),
-              Text('${item.percent}% of \$${item.depositAmount}', style: const TextStyle(color: Colors.white38, fontSize: 10)),
+              Text('+\$${item.commissionAmount.toStringAsFixed(2)}', style: GoogleFonts.poppins(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('${item.percent}% of \$${item.depositAmount}', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 10)),
             ],
           ),
         ],
@@ -442,7 +440,10 @@ class LeaderboardScreen extends ConsumerWidget {
             itemCount: list.length,
             itemBuilder: (context, index) {
               final entry = list[index];
-              return _LeaderboardTile(entry: entry, rank: index + 1);
+              return AnimatedScaleIn(
+                delay: index * 30,
+                child: _LeaderboardTile(entry: entry, rank: index + 1),
+              );
             },
           );
         },
@@ -461,36 +462,33 @@ class _LeaderboardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isTop3 = rank <= 3;
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isTop3 ? Colors.greenAccent.withValues(alpha: 0.05) : const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(20),
-        border: isTop3 ? Border.all(color: Colors.greenAccent.withValues(alpha: 0.2)) : null,
-      ),
+      borderRadius: 20,
+      color: isTop3 ? AppColors.overlayGreen : null,
+      borderColor: isTop3 ? AppColors.overlayGreenMedium : null,
       child: Row(
         children: [
-          Container(
+          SizedBox(
             width: 30,
-            alignment: Alignment.center,
-            child: Text('#$rank', style: TextStyle(
+            child: Text('#$rank', style: GoogleFonts.poppins(
               fontWeight: FontWeight.bold, 
-              color: isTop3 ? Colors.greenAccent : Colors.white38,
+              color: isTop3 ? AppColors.success : AppColors.textMuted,
               fontSize: 16
             )),
           ),
-          const SizedBox(width: 15),
+          AppSpacing.wLg,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(entry.username, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('Team Size: ${entry.teamSize}', style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                Text(entry.username, style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                Text('Team Size: ${entry.teamSize}', style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 11)),
               ],
             ),
           ),
-          Text('\$${entry.totalEarnings.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.greenAccent)),
+          Text('\$${entry.totalEarnings.toStringAsFixed(0)}', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.success)),
         ],
       ),
     );
@@ -506,20 +504,20 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 22),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: AppColors.surfaceCardAlt,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
             Icon(icon, color: color, size: 28),
-            const SizedBox(height: 10),
-            Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+            AppSpacing.hMd,
+            Text(label, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -535,7 +533,7 @@ class _LoadingCard extends StatelessWidget {
       height: 150,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: AppColors.surfaceCardAlt,
         borderRadius: BorderRadius.circular(30),
       ),
       child: const Center(child: CircularProgressIndicator()),

@@ -184,6 +184,13 @@ class ApiService {
     return await _dio.get('/run/bikes:getUserPurchases', queryParameters: {'userId': userId});
   }
 
+  Future<Response> claimDailyEarnings(String userId, String purchaseId) async {
+    return await _dio.post('/mutation/bikes:claimDailyEarnings', data: {
+      'userId': userId,
+      'purchaseId': purchaseId,
+    });
+  }
+
   // --- Network Methods ---
 
   Future<Response> getActiveNetworks() async {

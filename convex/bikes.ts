@@ -171,3 +171,54 @@ export const getUserPurchases = query({
     return purchases;
   },
 });
+
+export const claimDailyEarnings = mutation({
+  args: {
+    userId: v.id("users"),
+    purchaseId: v.id("purchases"),
+  },
+  handler: async (ctx, args) => {
+    const purchase = await ctx.db.get(args.purchaseId);
+    if (!purchase || purchase.userId !== args.userId) {
+      throw new Error("Purchase not found");
+    }
+
+    const now = Date.now();
+    const dayMs = 86400000;
+
+    if (purchase.lastClaimedAt && now - purchase.lastClaimedAt < dayMs) {
+      const hoursLeft = Math.ceil((dayMs - (now - purchase.lastClaimedAt)) / 3600000);
+      throw new Error(`Claim available again in ${hoursLeft} hours`);
+    }
+
+    // Amount to credit: dailyIncome in USDT, convert to micro-USDT
+    const earnedAmount = BigInt(Math.round(purchase.dailyIncome * 1000000));
+
+    // Upsert balance record with chainId=0 for claimed earnings
+    const existingBalance = await ctx.db
+      .query("balances")
+      .withIndex("by_user_chain_token", (q) =>
+        q.eq("userId", args.userId).eq("chainId", 0).eq("tokenSymbol", "USDT")
+      )
+      .first();
+
+    if (existingBalance) {
+      const newAmount = (BigInt(existingBalance.amount) + earnedAmount).toString();
+      await ctx.db.patch(existingBalance._id, { amount: newAmount, updatedAt: now });
+    } else {
+      await ctx.db.insert("balances", {
+        userId: args.userId,
+        chainId: 0,
+        tokenSymbol: "USDT",
+        amount: earnedAmount.toString(),
+        updatedAt: now,
+      });
+    }
+
+    // Update lastClaimedAt
+    await ctx.db.patch(args.purchaseId, { lastClaimedAt: now });
+
+    const earnedUsdt = Number(earnedAmount) / 1000000;
+    return { success: true, amount: earnedUsdt.toString() };
+  },
+});

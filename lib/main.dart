@@ -19,6 +19,11 @@ import 'providers/purchases_provider.dart';
 import 'providers/referral_provider.dart';
 import 'models/referral.dart';
 import 'services/api_service.dart';
+import 'theme/app_colors.dart';
+import 'theme/app_theme.dart' show AppTheme;
+import 'theme/app_animations.dart';
+import 'components/app_button.dart';
+import 'components/app_card.dart';
 
 
 void main() async {
@@ -112,29 +117,7 @@ class CryptoVaultApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'CryptoVault Pro',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00C853),
-          brightness: Brightness.dark,
-          surface: const Color(0xFF0F0F0F),
-        ),
-        textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
-        navigationBarTheme: const NavigationBarThemeData(
-          backgroundColor: Color(0xFF141414),
-          indicatorColor: Color(0xFF00C853),
-        ),
-        navigationRailTheme: const NavigationRailThemeData(
-          backgroundColor: Color(0xFF141414),
-          indicatorColor: Color(0xFF00C853),
-        ),
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-      ),
+      theme: AppTheme.dark,
       routerConfig: router,
     );
   }
@@ -203,7 +186,7 @@ class MainShell extends StatelessWidget {
             minExtendedWidth: 200,
             groupAlignment: -0.3,
             backgroundColor: const Color(0xFF0A0A0A),
-            indicatorColor: colorScheme.primary.withValues(alpha: 0.2),
+            indicatorColor: AppColors.primary.withValues(alpha: 0.2),
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Image.asset('asset/logo.png', width: 32, height: 32),
@@ -223,21 +206,21 @@ class MainShell extends StatelessWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.white12, width: 0.5)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.borderSubtle, width: 0.5)),
         ),
         child: BottomNavigationBar(
           currentIndex: currentIndex,
           onTap: (i) => context.go(_navItems[i].$1),
           type: BottomNavigationBarType.fixed,
-          backgroundColor: const Color(0xFF0F0F0F),
-          selectedItemColor: colorScheme.primary,
-          unselectedItemColor: Colors.white38,
+          backgroundColor: AppColors.surface,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.textMuted,
           selectedFontSize: 11,
           unselectedFontSize: 11,
           items: _navItems.map((item) => BottomNavigationBarItem(
             icon: Icon(item.$2),
-            activeIcon: Icon(item.$2, color: colorScheme.primary),
+            activeIcon: Icon(item.$2, color: AppColors.primary),
             label: item.$3,
           )).toList(),
         ),
@@ -256,6 +239,9 @@ class EarningsScreen extends ConsumerStatefulWidget {
 class _EarningsScreenState extends ConsumerState<EarningsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  String? _claimingPurchaseId;
+  String? _claimError;
+  String? _claimSuccess;
 
   @override
   void initState() {
@@ -269,11 +255,60 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
     super.dispose();
   }
 
+  Future<void> _handleClaim(String purchaseId) async {
+    setState(() {
+      _claimingPurchaseId = purchaseId;
+      _claimError = null;
+      _claimSuccess = null;
+    });
+
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final auth = ref.read(authProvider);
+      if (auth.userId == null) return;
+
+      final response = await apiService.claimDailyEarnings(auth.userId!, purchaseId);
+      final data = response.data;
+      if (data is Map && data['success'] == true) {
+        final amount = data['amount'] ?? '0';
+        setState(() {
+          _claimSuccess = 'Claimed \$$amount!';
+        });
+        ref.invalidate(purchasesProvider);
+        ref.invalidate(balanceProvider(auth.userId!));
+      } else {
+        final errMsg = data is Map ? (data['message'] ?? 'Claim failed') : 'Claim failed';
+        setState(() => _claimError = errMsg.toString());
+      }
+    } catch (e) {
+      final msg = e.toString().replaceAll('Exception: ', '');
+      setState(() => _claimError = msg);
+    } finally {
+      setState(() => _claimingPurchaseId = null);
+    }
+  }
+
+  bool _canClaim(Map<String, dynamic> purchase) {
+    final lastClaimed = purchase['lastClaimedAt'] as num?;
+    if (lastClaimed == null) return true;
+    return DateTime.now().millisecondsSinceEpoch - lastClaimed.toInt() >= 86400000;
+  }
+
+  int _hoursUntilClaim(Map<String, dynamic> purchase) {
+    final lastClaimed = purchase['lastClaimedAt'] as num?;
+    if (lastClaimed == null) return 0;
+    final elapsed = DateTime.now().millisecondsSinceEpoch - lastClaimed.toInt();
+    final remaining = 86400000 - elapsed;
+    if (remaining <= 0) return 0;
+    return (remaining / 3600000).ceil();
+  }
+
   @override
   Widget build(BuildContext context) {
     final purchasesAsync = ref.watch(purchasesProvider);
     final referralStatsAsync = ref.watch(referralStatsProvider);
 
+    // Use the data if available, otherwise empty list
     final purchases = purchasesAsync.asData?.value ?? [];
     final referralStats = referralStatsAsync.asData?.value;
 
@@ -289,68 +324,77 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Container(
-          alignment: Alignment.center,
-          child: Column(
-            children: [
-              Text(
-                'MY EARNINGS',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 24,
-                  color: Colors.white,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              Text(
-                'Your income overview',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w400,
-                  fontSize: 12,
-                  color: Colors.grey[400],
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
+        title: Text(
+          'EARNINGS',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w700,
+            fontSize: 24,
+            color: AppColors.textPrimary,
+            letterSpacing: 1.2,
           ),
         ),
-        centerTitle: true,
-        elevation: 0.5,
-        backgroundColor: const Color(0xFF0F0F0F),
-        shadowColor: const Color(0xFF00C853).withValues(alpha: 0.3),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(4),
+          child: Container(
+            height: 1,
+            color: AppColors.borderSubtle,
+          ),
+        ),
       ),
-      backgroundColor: const Color(0xFF0A0A0A),
       body: Column(
         children: [
-          _buildCombinedSummary(
-            totalInvestment,
-            totalDailyProfit,
-            referralBalance,
-            totalReferralEarnings,
+          AnimatedEntry(
+            delay: 0,
+            child: _buildCombinedSummary(
+              totalInvestment,
+              totalDailyProfit,
+              referralBalance,
+              totalReferralEarnings,
+            ),
           ),
-          TabBar(
-            controller: _tabController,
-            indicatorColor: const Color(0xFF00C853),
-            labelColor: const Color(0xFF00C853),
-            unselectedLabelColor: Colors.white54,
-            labelStyle: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
+          AnimatedEntry(
+            delay: 50,
+            child: TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(text: 'Products'),
+                Tab(text: 'Referrals'),
+              ],
             ),
-            unselectedLabelStyle: GoogleFonts.poppins(
-              fontWeight: FontWeight.w500,
-              fontSize: 13,
-            ),
-            tabs: const [
-              Tab(text: 'Products'),
-              Tab(text: 'Referrals'),
-            ],
           ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildProductsTab(purchases),
+                purchasesAsync.when(
+                  data: (purchaseData) {
+                    if (purchaseData.isEmpty) {
+                      return _buildEmptyProducts();
+                    }
+                    return _buildProductsTab(purchaseData);
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, st) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.error_outline, size: 48, color: Colors.grey[600]),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error loading packages: ${e.toString()}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.white54,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 _buildReferralsTab(referralStats),
               ],
             ),
@@ -366,31 +410,13 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
     double referralBalance,
     double totalReferralEarnings,
   ) {
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF00C853).withValues(alpha: 0.15),
-            const Color(0xFF00C853).withValues(alpha: 0.05),
-          ],
-        ),
-        border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.4),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00C853).withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
       padding: const EdgeInsets.all(16),
+      borderRadius: 20,
+      borderColor: AppColors.borderPrimary,
+      borderWidth: 1.5,
+      glowColor: AppColors.primary,
       child: Column(
         children: [
           Row(
@@ -433,8 +459,8 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, size: 20, color: const Color(0xFF00C853)),
-          const SizedBox(height: 4),
+          Icon(icon, size: 20, color: AppColors.primary),
+          AppSpacing.hXs,
           Text(
             label,
             maxLines: 1,
@@ -442,10 +468,10 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
             style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[400],
+              color: AppColors.textTertiary,
             ),
           ),
-          const SizedBox(height: 2),
+          AppSpacing.hXs,
           Text(
             value,
             maxLines: 1,
@@ -453,7 +479,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
             style: GoogleFonts.poppins(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF00C853),
+              color: AppColors.primary,
             ),
           ),
         ],
@@ -462,9 +488,11 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
   }
 
   Widget _buildProductsTab(List<Map<String, dynamic>> purchases) {
-    if (purchases.isEmpty) {
-      return _buildEmptyProducts();
-    }
+    final purchaseWidgets = purchases
+        .where((p) => p.isNotEmpty)
+        .map((p) => _buildPurchaseCard(p))
+        .toList();
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       children: [
@@ -477,75 +505,66 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
           ),
         ),
         const SizedBox(height: 12),
-        ...purchases.map((p) => _buildPurchaseCard(p)),
+        ...purchaseWidgets,
       ],
     );
   }
 
   Widget _buildEmptyProducts() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF00C853).withValues(alpha: 0.1),
-                border: Border.all(
-                  color: const Color(0xFF00C853).withValues(alpha: 0.3),
-                  width: 2,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF00C853).withValues(alpha: 0.1),
+                  border: Border.all(
+                    color: const Color(0xFF00C853).withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 48,
+                  color: Color(0xFF00C853),
                 ),
               ),
-              child: const Icon(
-                Icons.shopping_bag_outlined,
-                size: 48,
-                color: Color(0xFF00C853),
-              ),
-            ),
-            const SizedBox(height: 28),
-            Text(
-              'No Packages Yet',
-              style: GoogleFonts.poppins(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Purchase a bike package to start\ngenerating daily earnings!',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[400],
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () => context.push('/bike'),
-              icon: const Icon(Icons.directions_bike_rounded, size: 20),
-              label: Text(
-                'Go to Shop',
+              const SizedBox(height: 28),
+              Text(
+                'No Packages Yet',
                 style: GoogleFonts.poppins(
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Purchase a bike package to start\ngenerating daily earnings!',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
                   fontSize: 14,
+                  color: Colors.grey[400],
+                  height: 1.5,
                 ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00C853),
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: AppPrimaryButton(
+                  label: 'Go to Shop',
+                  icon: Icons.directions_bike_rounded,
+                  onPressed: () => context.push('/bike'),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -572,17 +591,10 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
   }
 
   Widget _buildReferralStatsCard(ReferralStats stats) {
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: const Color(0xFF1E1E1E),
-        border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.15),
-          width: 1.5,
-        ),
-      ),
-      padding: const EdgeInsets.all(16),
+      borderColor: AppColors.overlayGreenMedium,
+      borderWidth: 1.5,
       child: Column(
         children: [
           Row(
@@ -617,17 +629,17 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
             style: GoogleFonts.poppins(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF00C853),
+              color: AppColors.primary,
             ),
           ),
-          const SizedBox(height: 2),
+          AppSpacing.hXs,
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.poppins(
               fontSize: 11,
-              color: Colors.grey[500],
+              color: AppColors.textMuted,
             ),
           ),
         ],
@@ -667,11 +679,6 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
                   onPressed: () => context.push('/referrals/earnings'),
                   child: Text(
                     'View All (${earnings.length})',
-                    style: GoogleFonts.poppins(
-                      color: const Color(0xFF00C853),
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
                   ),
                 ),
               ),
@@ -700,16 +707,11 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
     final date = DateTime.fromMillisecondsSinceEpoch(item.createdAt);
     final dateStr = '${date.month}/${date.day}/${date.year}';
 
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.1),
-        ),
-      ),
+      borderRadius: 12,
+      borderColor: AppColors.overlayGreen,
       child: Row(
         children: [
           Container(
@@ -748,25 +750,31 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '+\$${item.commissionAmount.toStringAsFixed(2)}',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF00C853),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '+\$${item.commissionAmount.toStringAsFixed(2)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF00C853),
+                  ),
                 ),
-              ),
-              Text(
-                dateStr,
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  color: Colors.grey[600],
+                Text(
+                  dateStr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: Colors.grey[600],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -774,6 +782,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
   }
 
   Widget _buildPurchaseCard(Map<String, dynamic> purchase) {
+    final purchaseId = purchase['_id'] as String? ?? '';
     final name = purchase['bikeName'] as String? ?? 'Package';
     final price = (purchase['equipmentPrice'] as num?)?.toDouble() ?? 0;
     final daily = (purchase['dailyIncome'] as num?)?.toDouble() ?? 0;
@@ -784,90 +793,143 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
         : null;
     final dateStr =
         date != null ? '${date.month}/${date.day}/${date.year}' : '';
+    final canClaim = _canClaim(purchase);
+    final hoursLeft = _hoursUntilClaim(purchase);
+    final isClaiming = _claimingPurchaseId == purchaseId;
 
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: const Color(0xFF1E1E1E),
-        border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.15),
-          width: 1.5,
-        ),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
+      borderColor: AppColors.overlayGreenMedium,
+      borderWidth: 1.5,
+      child: Column(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF00C853).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.directions_bike_rounded,
-              color: Color(0xFF00C853),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00C853).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 2),
+                child: const Icon(
+                  Icons.directions_bike_rounded,
+                  color: Color(0xFF00C853),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Invested: \$${price.toStringAsFixed(0)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    if (dateStr.isNotEmpty)
+                      Text(
+                        'Purchased: $dateStr',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '+\$${daily.toStringAsFixed(2)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF00C853),
+                      ),
+                    ),
+                    Text(
+                      '/day',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '\$${monthly.toStringAsFixed(2)}/mo',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (!canClaim)
                 Text(
-                  'Invested: \$${price.toStringAsFixed(0)}',
+                  '${hoursLeft}h remaining',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
                     color: Colors.grey[500],
                   ),
                 ),
-                if (dateStr.isNotEmpty)
-                  Text(
-                    'Purchased: $dateStr',
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '+\$${daily.toStringAsFixed(2)}',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF00C853),
-                ),
-              ),
-              Text(
-                '/day',
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  color: Colors.grey[500],
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '\$${monthly.toStringAsFixed(2)}/mo',
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[400],
+              const Spacer(),
+              _claimError != null && _claimingPurchaseId == null
+                  ? Expanded(
+                      child: Text(
+                        _claimError!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+              _claimSuccess != null && _claimingPurchaseId == null
+                  ? Text(
+                      _claimSuccess!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: const Color(0xFF00C853),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: AppPrimaryButton(
+                  label: isClaiming ? 'Claiming...' : 'Claim',
+                  icon: isClaiming ? Icons.hourglass_top : Icons.monetization_on_outlined,
+                  onPressed: canClaim && !isClaiming ? () => _handleClaim(purchaseId) : null,
+                  height: 32,
+                  fullWidth: false,
                 ),
               ),
             ],
@@ -1244,16 +1306,10 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
       }
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF1A1A1A),
-        border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.25),
-          width: 1,
-        ),
-      ),
-      padding: const EdgeInsets.all(20),
+    return AppCard(
+      borderRadius: 20,
+      color: AppColors.surfaceCard,
+      borderColor: AppColors.overlayGreenStrong,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1310,7 +1366,7 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
       child: Column(
         children: [
           Text(icon, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 8),
+          AppSpacing.hSm,
           Text(
             label,
             maxLines: 1,
@@ -1318,10 +1374,10 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[400],
+              color: AppColors.textTertiary,
             ),
           ),
-          const SizedBox(height: 6),
+          AppSpacing.hXs,
           Text(
             value,
             maxLines: 1,
@@ -1329,7 +1385,7 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF00C853),
+              color: AppColors.primary,
             ),
           ),
         ],
@@ -1420,7 +1476,7 @@ class _BikeCardState extends ConsumerState<BikeCard> {
             (p) => _BikeScreenState._bikeOrder.indexOf(p['bikeId'] as String? ?? '') == highestOwnedIndex,
             orElse: () => {},
           );
-          if (refundPurchase is Map<String, dynamic>) {
+          {
             final refundPrice = (refundPurchase['equipmentPrice'] as num).toDouble();
             refundAmount = BigInt.from((refundPrice * 1000000).round()) *
                 BigInt.from(98) ~/
@@ -1564,47 +1620,44 @@ class _BikeCardState extends ConsumerState<BikeCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: widget.isNextPackage
-            ? const Color(0xFF0C2B16)
-            : const Color(0xFF1A1A1A),
-        border: Border.all(
-          color: widget.isNextPackage
-              ? const Color(0xFF00C853)
-              : const Color(0xFF00C853).withValues(alpha: 0.2),
-          width: widget.isNextPackage ? 1.5 : 1,
-        ),
-        boxShadow: widget.isNextPackage
-            ? [
-                BoxShadow(
-                  color: const Color(0xFF00C853).withOpacity(0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+    final isHighlighted = widget.isOwned || widget.isNextPackage;
+    final isDisabledByBalance = !widget.canBuy && !widget.isOwned;
+    
+    return AppPressable(
+      onTap: widget.canBuy ? null : null,
+      child: Opacity(
+        opacity: isDisabledByBalance ? 0.4 : 1.0,
+        child: AppCard(
+          borderRadius: 20,
+          padding: const EdgeInsets.all(12),
+          color: isHighlighted
+              ? const Color(0xFF0C2B16)
+              : AppColors.surfaceCard,
+          borderColor: isHighlighted
+              ? AppColors.primary
+              : AppColors.overlayGreenMedium,
+          borderWidth: isHighlighted ? 1.5 : 1,
+          glowColor: isHighlighted ? AppColors.primary : null,
+          child: Row(
+            children: [
+              _buildImage(),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildDetails(),
+                    const SizedBox(height: 6),
+                    _buildStatsRow(),
+                    const SizedBox(height: 10),
+                    _buildAction(),
+                  ],
                 ),
-              ]
-            : null,
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          _buildImage(),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildDetails(),
-                const SizedBox(height: 6),
-                _buildStatsRow(),
-                const SizedBox(height: 10),
-                _buildAction(),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1654,7 +1707,24 @@ class _BikeCardState extends ConsumerState<BikeCard> {
           overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 6),
-        if (widget.isNextPackage)
+        if (widget.isOwned)
+          Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00C853).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Currently Owned',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF00C853),
+              ),
+            ),
+          )
+        else if (widget.isNextPackage)
           Container(
             margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1790,7 +1860,7 @@ class _BikeCardState extends ConsumerState<BikeCard> {
             Icon(Icons.check_circle, size: 14, color: const Color(0xFF00C853)),
             const SizedBox(width: 6),
             Text(
-              'Owned',
+              'Currently Owned',
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -1814,7 +1884,7 @@ class _BikeCardState extends ConsumerState<BikeCard> {
           ),
         ),
         child: Text(
-          widget.disabledReason ?? 'Locked until you purchase the beginner package.',
+          widget.disabledReason ?? 'Insufficient balance',
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -1835,7 +1905,7 @@ class _BikeCardState extends ConsumerState<BikeCard> {
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF00C853),
+                color: AppColors.primary,
               ),
             ),
           ],
@@ -1887,8 +1957,7 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
   @override
   Widget build(BuildContext context) {
     final statsAsync = ref.watch(teamStatsProvider);
-    final selectedPeriod = ref.watch(selectedPeriodProvider);
-    final colorScheme = Theme.of(context).colorScheme;
+    ref.watch(selectedPeriodProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -1902,80 +1971,42 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
           final teamC = data['teamC'] as Map<String, dynamic>? ?? {};
           final summary = data['summary'] as Map<String, dynamic>? ?? {};
 
+          final aIncome = summary['teamIncome']?['teamA'] ?? '0';
+          final bIncome = summary['teamIncome']?['teamB'] ?? '0';
+          final cIncome = summary['teamIncome']?['teamC'] ?? '0';
+
+          final membersA = teamA['members'] as List? ?? [];
+          final membersB = teamB['members'] as List? ?? [];
+          final membersC = teamC['members'] as List? ?? [];
+
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- Team Cards Row ---
+                _buildPeriodSelector(),
+                const SizedBox(height: 20),
+                _buildStatRow([
+                  ('Team A', '${membersA.length}', AppColors.success),
+                  ('Team B', '${membersB.length}', AppColors.accentBlue),
+                  ('Team C', '${membersC.length}', AppColors.accentPurple),
+                ]),
+                const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(child: _buildTeamCard(
-                      title: 'Team A',
-                      count: '${teamA['count'] ?? 0}',
-                      percent: '${teamA['benefitsPct'] ?? 19}%',
-                      color: const Color(0xFF00C853),
-                      gradientColors: [const Color(0xFF00C853).withValues(alpha: 0.15), const Color(0xFF00C853).withValues(alpha: 0.05)],
-                    )),
-                    const SizedBox(width: 10),
-                    Expanded(child: _buildTeamCard(
-                      title: 'Team B',
-                      count: '${teamB['count'] ?? 0}',
-                      percent: '${teamB['benefitsPct'] ?? 4}%',
-                      color: const Color(0xFF448AFF),
-                      gradientColors: [const Color(0xFF448AFF).withValues(alpha: 0.15), const Color(0xFF448AFF).withValues(alpha: 0.05)],
-                    )),
-                    const SizedBox(width: 10),
-                    Expanded(child: _buildTeamCard(
-                      title: 'Team C',
-                      count: '${teamC['count'] ?? 0}',
-                      percent: '${teamC['benefitsPct'] ?? 2}%',
-                      color: const Color(0xFFFF6D00),
-                      gradientColors: [const Color(0xFFFF6D00).withValues(alpha: 0.15), const Color(0xFFFF6D00).withValues(alpha: 0.05)],
-                    )),
+                    Expanded(child: _buildTeamCard(title: 'Team A', count: '${membersA.length}', percent: '$aIncome%', color: AppColors.success, gradientColors: [const Color(0xFF1B5E20).withValues(alpha: 0.3), Colors.transparent])),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildTeamCard(title: 'Team B', count: '${membersB.length}', percent: '$bIncome%', color: AppColors.accentBlue, gradientColors: [AppColors.overlayBlue, Colors.transparent])),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildTeamCard(title: 'Team C', count: '${membersC.length}', percent: '$cIncome%', color: AppColors.accentPurple, gradientColors: [AppColors.overlayPurpleSoft, Colors.transparent])),
                   ],
                 ),
-                const SizedBox(height: 20),
-
-                // --- Period Filter Tabs ---
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  child: Row(
-                    children: [
-                      _buildPeriodTab('today', 'Today'),
-                      _buildPeriodTab('yesterday', 'Yesterday'),
-                      _buildPeriodTab('last7days', '7 Days'),
-                      _buildPeriodTab('thismonth', 'This Month'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // --- Stats Grid ---
-                _buildStatRow([
-                  ('Today\'s New Team\nMembers', '${summary['newMembersToday'] ?? 0}', colorScheme.primary),
-                  ('Today\'s Team\nRecharge Amount', _formatAmount(summary['teamRechargeToday']), Colors.amberAccent),
-                ]),
-                const SizedBox(height: 10),
-                _buildStatRow([
-                  ('Today\'s Team\nWithdrawal Amount', _formatAmount(summary['teamWithdrawalToday']), Colors.redAccent),
-                  ('Total Team Members', '${summary['totalMembers'] ?? 0}', colorScheme.primary),
-                ]),
-                const SizedBox(height: 10),
-                _buildStatRow([
-                  ('Team Total\nDeposit Amount', _formatAmount(summary['totalDeposit']), Colors.amberAccent),
-                  ('Team Total\nWithdrawal Amount', _formatAmount(summary['totalWithdrawal']), Colors.redAccent),
-                ]),
               ],
             ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white54))),
+        error: (e, _) => Center(child: Text('Error loading team data')),
       ),
     );
   }
@@ -2026,6 +2057,18 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPeriodSelector() {
+    return Row(
+      children: [
+        _buildPeriodTab('today', 'Today'),
+        const SizedBox(width: 8),
+        _buildPeriodTab('last7days', 'Week'),
+        const SizedBox(width: 8),
+        _buildPeriodTab('thismonth', 'Month'),
+      ],
     );
   }
 
@@ -2214,103 +2257,92 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final bool isTablet = size.width > 600;
     final double horizontalPadding = isDesktop ? size.width * 0.25 : isTablet ? size.width * 0.15 : 24.0;
 
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.green.withValues(alpha: 0.05), Colors.black],
+    return AnimatedEntry(
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: AppGradients.authBackground,
           ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 60),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Image.asset('asset/logo.png', width: 70, height: 70),
-                  const SizedBox(height: 15),
-                  Text(
-                    'CryptoVault Pro',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.orbitron(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  const SizedBox(height: 30),
-                  
-                  _buildTextField('Email Address', Icons.email_outlined, _emailCtrl),
-                  const SizedBox(height: 15),
-                  _buildTextField(
-                    'Password', 
-                    Icons.lock_outline, 
-                    _passCtrl, 
-                    obscureText: _obscurePass,
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscurePass ? Icons.visibility_off : Icons.visibility, color: Colors.greenAccent),
-                      onPressed: () => setState(() => _obscurePass = !_obscurePass),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 60),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Icon(Icons.shield_rounded, size: 70, color: AppColors.primary),
+                    AppSpacing.hLg,
+                    Text(
+                      'CryptoVault Pro',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.orbitron(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
-                  ),
-                  
-                  if (!_isLogin) ...[
+                    AppSpacing.hXxxl,
+                    
+                    _buildTextField('Email Address', Icons.email_outlined, _emailCtrl),
                     const SizedBox(height: 15),
                     _buildTextField(
-                      'Confirm Password', 
-                      Icons.lock_reset, 
-                      _confirmPassCtrl, 
-                      obscureText: _obscureConfirmPass,
+                      'Password', 
+                      Icons.lock_outline, 
+                      _passCtrl, 
+                      obscureText: _obscurePass,
                       suffixIcon: IconButton(
-                        icon: Icon(_obscureConfirmPass ? Icons.visibility_off : Icons.visibility, color: Colors.greenAccent),
-                        onPressed: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
+                        icon: Icon(_obscurePass ? Icons.visibility_off : Icons.visibility, color: AppColors.primary),
+                        onPressed: () => setState(() => _obscurePass = !_obscurePass),
                       ),
                     ),
-                    const SizedBox(height: 15),
-                    _buildTextField(
-                      'Transaction Password', 
-                      Icons.enhanced_encryption_outlined, 
-                      _transPassCtrl, 
-                      obscureText: _obscureTransPass,
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscureTransPass ? Icons.visibility_off : Icons.visibility, color: Colors.greenAccent),
-                        onPressed: () => setState(() => _obscureTransPass = !_obscureTransPass),
+                    
+                    if (!_isLogin) ...[
+                      const SizedBox(height: 15),
+                      _buildTextField(
+                        'Confirm Password', 
+                        Icons.lock_reset, 
+                        _confirmPassCtrl, 
+                        obscureText: _obscureConfirmPass,
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscureConfirmPass ? Icons.visibility_off : Icons.visibility, color: AppColors.primary),
+                          onPressed: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
+                        ),
                       ),
+                      const SizedBox(height: 15),
+                      _buildTextField(
+                        'Transaction Password', 
+                        Icons.enhanced_encryption_outlined, 
+                        _transPassCtrl, 
+                        obscureText: _obscureTransPass,
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscureTransPass ? Icons.visibility_off : Icons.visibility, color: AppColors.primary),
+                          onPressed: () => setState(() => _obscureTransPass = !_obscureTransPass),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      _buildTextField('Invite Code (Optional 5-digit code)', Icons.card_giftcard, _inviteCtrl),
+                    ],
+                    
+                    AppSpacing.hXxxl,
+                    AppPrimaryButton(
+                      label: _isLogin ? 'Access Wallet' : 'Create Account',
+                      isLoading: authState.isLoading,
+                      onPressed: authState.isLoading ? null : _handleSubmit,
                     ),
-                    const SizedBox(height: 15),
-                    _buildTextField('Invite Code (Optional 5-digit code)', Icons.card_giftcard, _inviteCtrl),
-                  ],
-                  
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: authState.isLoading ? null : _handleSubmit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00C853),
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                    ),
-                    child: authState.isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                        : Text(_isLogin ? 'Access Wallet' : 'Create Account', 
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  ),
 
-                  const SizedBox(height: 10),
-                  if (_isLogin)
+                    AppSpacing.hMd,
+                    if (_isLogin)
+                      TextButton(
+                        onPressed: () => context.go('/forgot-password'),
+                        child: const Text('Forgot Password?'),
+                      ),
+                    AppSpacing.hXs,
                     TextButton(
-                      onPressed: () => context.go('/forgot-password'),
-                      child: const Text('Forgot Password?', style: TextStyle(color: Colors.white38)),
-                    ),
-                  const SizedBox(height: 4),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: TextButton(
                       onPressed: () => setState(() => _isLogin = !_isLogin),
-                      child: Text(_isLogin ? "Don't have an account? Register" : "Already have an account? Login", style: const TextStyle(color: Colors.greenAccent)),
+                      child: Text(
+                        _isLogin ? "Don't have an account? Register" : "Already have an account? Login",
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -2326,12 +2358,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white38),
-        prefixIcon: Icon(icon, color: Colors.greenAccent),
+        prefixIcon: Icon(icon),
         suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.05),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
       ),
     );
   }
@@ -2442,11 +2470,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0D2818), Color(0xFF000000)],
-          ),
+          gradient: AppGradients.authBackground,
         ),
         child: Center(
           child: SingleChildScrollView(
@@ -2457,48 +2481,39 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.lock_reset, size: 70, color: Color(0xFF00C853)),
-                  const SizedBox(height: 15),
+                  Icon(Icons.lock_reset, size: 70, color: AppColors.primary),
+                  AppSpacing.hLg,
                   Text(
                     'Forgot Password?',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
-                  const SizedBox(height: 8),
+                  AppSpacing.hSm,
                   Text(
                     'Enter your email and we\'ll send you a reset link.',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(fontSize: 14, color: Colors.white54),
+                    style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textTertiary),
                   ),
                   const SizedBox(height: 35),
                   if (_sent)
                     Column(
                       children: [
-                        const Icon(Icons.check_circle_outline, size: 64, color: Color(0xFF00C853)),
-                        const SizedBox(height: 16),
+                        Icon(Icons.check_circle_outline, size: 64, color: AppColors.primary),
+                        AppSpacing.hLg,
                         Text(
                           'Reset link sent!',
                           style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
                         ),
-                        const SizedBox(height: 8),
+                        AppSpacing.hSm,
                         Text(
                           'Check your email inbox and click the link to reset your password.',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(fontSize: 13, color: Colors.white54),
+                          style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textTertiary),
                         ),
-                        const SizedBox(height: 30),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => context.go('/login'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00C853),
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                            ),
-                            child: const Text('Back to Login', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                          ),
+                        AppSpacing.hXxxl,
+                        AppPrimaryButton(
+                          label: 'Back to Login',
+                          onPressed: () => context.go('/login'),
                         ),
                       ],
                     )
@@ -2506,26 +2521,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     Column(
                       children: [
                         _buildTextField('Email Address', Icons.email_outlined, _emailCtrl),
-                        const SizedBox(height: 30),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _handleSubmit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00C853),
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                                : const Text('Send Reset Link', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          ),
+                        AppSpacing.hXxxl,
+                        AppPrimaryButton(
+                          label: 'Send Reset Link',
+                          isLoading: _isLoading,
+                          onPressed: _isLoading ? null : _handleSubmit,
                         ),
-                        const SizedBox(height: 12),
+                        AppSpacing.hMd,
                         TextButton(
                           onPressed: () => context.go('/login'),
-                          child: const Text('Back to Login', style: TextStyle(color: Colors.greenAccent)),
+                          child: const Text('Back to Login'),
                         ),
                       ],
                     ),
@@ -2544,11 +2549,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white38),
-        prefixIcon: Icon(icon, color: Colors.greenAccent),
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.05),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        prefixIcon: Icon(icon),
       ),
     );
   }
@@ -3228,13 +3229,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       appBar: AppBar(
         title: const Text('PORTFOLIO'),
         actions: [
-          IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () => context.push('/settings')),
+          AppIconButton(
+            icon: Icons.settings_outlined,
+            onPressed: () => context.push('/settings'),
+          ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           await ref.read(authProvider.notifier).refreshUser();
-          // Force wait for transactions sync to finish before refreshing balance
           await ref.refresh(transactionsProvider(userId).future);
           ref.refresh(balanceProvider(userId));
         },
@@ -3243,41 +3246,68 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: Column(
             children: [
-              const _ImageCarousel(),
-              const SizedBox(height: 24),
-              balanceAsync.when(
-                data: (balance) => _PortfolioCard(balance: balance, isAdmin: auth.isAdmin),
-                loading: () => _PortfolioCard(balance: "...", isLoading: true, isAdmin: auth.isAdmin),
-                error: (e, s) => _PortfolioCard(balance: "0.00", isAdmin: auth.isAdmin),
+              const AnimatedEntry(
+                delay: 0,
+                child: _ImageCarousel(),
               ),
-              const SizedBox(height: 20),
-              const _LiveActivityTicker(),
-              const SizedBox(height: 20),
-              _AffiliatePromotionCard(onTap: () => context.push('/referrals')),
-              const SizedBox(height: 25),
-              Row(
-                children: [
-                  Expanded(child: _ActionTile(icon: Icons.add_circle_outline, label: 'Deposit', color: Colors.greenAccent, onTap: () => context.push('/deposit'))),
-                  const SizedBox(width: 15),
-                  Expanded(child: _ActionTile(icon: Icons.arrow_circle_up_outlined, label: 'Withdraw', color: Colors.orangeAccent, onTap: () => context.push('/withdraw'))),
-                ],
+              AppSpacing.hXxl,
+              AnimatedEntry(
+                delay: 80,
+                child: balanceAsync.when(
+                  data: (balance) => _PortfolioCard(balance: balance, isAdmin: auth.isAdmin),
+                  loading: () => _PortfolioCard(balance: "...", isLoading: true, isAdmin: auth.isAdmin),
+                  error: (e, s) => _PortfolioCard(balance: "0.00", isAdmin: auth.isAdmin),
+                ),
               ),
-              const SizedBox(height: 32),
-              const _VideoExplainer(),
-              const SizedBox(height: 32),
-              const _OurProductSection(),
-              const SizedBox(height: 32),
-              const _RecentActivityHeader(),
-              const SizedBox(height: 20),
-              activityAsync.when(
-                data: (items) => _ActivityList(items: items),
-                loading: () => const Center(child: Padding(
-                  padding: EdgeInsets.all(40.0),
-                  child: CircularProgressIndicator(color: Colors.greenAccent),
-                )),
-                error: (e, s) => _ErrorState(
-                  message: 'Failed to load activity',
-                  onRetry: () => ref.invalidate(activityProvider(userId)),
+              AppSpacing.hXl,
+              AnimatedEntry(
+                delay: 160,
+                child: const _LiveActivityTicker(),
+              ),
+              AppSpacing.hXl,
+              AnimatedEntry(
+                delay: 240,
+                child: _AffiliatePromotionCard(onTap: () => context.push('/referrals')),
+              ),
+              AppSpacing.hXxxl,
+              AnimatedEntry(
+                delay: 300,
+                child: Row(
+                  children: [
+                    Expanded(child: _ActionTile(icon: Icons.add_circle_outline, label: 'Deposit', color: AppColors.success, onTap: () => context.push('/deposit'))),
+                    AppSpacing.wLg,
+                    Expanded(child: _ActionTile(icon: Icons.arrow_circle_up_outlined, label: 'Withdraw', color: AppColors.warning, onTap: () => context.push('/withdraw'))),
+                  ],
+                ),
+              ),
+              AppSpacing.hXxxl,
+              AnimatedEntry(
+                delay: 360,
+                child: const _VideoExplainer(),
+              ),
+              AppSpacing.hXxxl,
+              AnimatedEntry(
+                delay: 420,
+                child: const _OurProductSection(),
+              ),
+              AppSpacing.hXxxl,
+              AnimatedEntry(
+                delay: 480,
+                child: const _RecentActivityHeader(),
+              ),
+              AppSpacing.hXl,
+              AnimatedEntry(
+                delay: 540,
+                child: activityAsync.when(
+                  data: (items) => _ActivityList(items: items),
+                  loading: () => const Center(child: Padding(
+                    padding: EdgeInsets.all(40.0),
+                    child: CircularProgressIndicator(),
+                  )),
+                  error: (e, s) => _ErrorState(
+                    message: 'Failed to load activity',
+                    onRetry: () => ref.invalidate(activityProvider(userId)),
+                  ),
                 ),
               ),
             ],
@@ -3306,12 +3336,8 @@ class _PortfolioCard extends StatelessWidget {
       padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1B5E20), Color(0xFF00C853)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [BoxShadow(color: Colors.greenAccent.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 10))],
+        gradient: AppGradients.primary,
+        boxShadow: [BoxShadow(color: AppColors.shadowGreen, blurRadius: 20, offset: const Offset(0, 10))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3336,11 +3362,11 @@ class _PortfolioCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          AppSpacing.hMd,
           isLoading 
             ? const SizedBox(height: 45, width: 45, child: CircularProgressIndicator(color: Colors.white))
             : Text('\$${displayBalance.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w900, letterSpacing: -1)),
-          const SizedBox(height: 15),
+          AppSpacing.hLg,
           const Row(
             children: [
               Icon(Icons.trending_up, size: 16, color: Colors.white),
@@ -3433,32 +3459,32 @@ class _LiveActivityTickerState extends State<_LiveActivityTicker>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
+    return AppCard(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      borderRadius: 20,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              Container(
+              AnimatedContainer(
+                duration: AppDurations.fast,
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.greenAccent,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: AppColors.primary, blurRadius: 4),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              const Text(
+              AppSpacing.wSm,
+              Text(
                 'Live Transactions',
-                style: TextStyle(
-                  color: Colors.white,
+                style: GoogleFonts.poppins(
+                  color: AppColors.textPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
@@ -3467,11 +3493,11 @@ class _LiveActivityTickerState extends State<_LiveActivityTicker>
               const Spacer(),
               Text(
                 '${_items.length} txs',
-                style: const TextStyle(color: Colors.white38, fontSize: 10),
+                style: GoogleFonts.poppins(color: AppColors.textMuted, fontSize: 10),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          AppSpacing.hMd,
           SizedBox(
             height: 36,
             child: ListView.builder(
@@ -3496,13 +3522,13 @@ class _LiveActivityTickerState extends State<_LiveActivityTicker>
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: isDep
-            ? Colors.greenAccent.withValues(alpha: 0.08)
-            : Colors.orangeAccent.withValues(alpha: 0.08),
+            ? AppColors.overlayGreen
+            : AppColors.overlayOrange,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isDep
-              ? Colors.greenAccent.withValues(alpha: 0.15)
-              : Colors.orangeAccent.withValues(alpha: 0.15),
+              ? AppColors.overlayGreenMedium
+              : AppColors.accentOrange.withValues(alpha: 0.15),
         ),
       ),
       child: Row(
@@ -3510,19 +3536,19 @@ class _LiveActivityTickerState extends State<_LiveActivityTicker>
         children: [
           Icon(
             isDep ? Icons.arrow_downward : Icons.arrow_upward,
-            color: isDep ? Colors.greenAccent : Colors.orangeAccent,
+            color: isDep ? AppColors.success : AppColors.warning,
             size: 11,
           ),
-          const SizedBox(width: 6),
+          AppSpacing.wXs,
           Text(
             tx.username,
-            style: const TextStyle(color: Colors.white70, fontSize: 11),
+            style: GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 11),
           ),
-          const SizedBox(width: 6),
+          AppSpacing.wXs,
           Text(
             '${isDep ? '+' : '-'}\$${tx.amount.toStringAsFixed(0)}',
-            style: TextStyle(
-              color: isDep ? Colors.greenAccent : Colors.orangeAccent,
+            style: GoogleFonts.poppins(
+              color: isDep ? AppColors.success : AppColors.warning,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -3553,21 +3579,20 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 22),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: AppColors.surfaceCardAlt,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          border: Border.all(color: AppColors.borderSubtle),
         ),
         child: Column(
           children: [
             Icon(icon, color: color, size: 30),
-            const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            AppSpacing.hSm,
+            Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
           ],
         ),
       ),
@@ -3594,7 +3619,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (_pageCtrl.hasClients) {
         final next = (_current + 1) % carouselProducts.length;
-        _pageCtrl.animateToPage(next, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
+        _pageCtrl.animateToPage(next, duration: AppDurations.carousel, curve: AppEasing.easeInOut);
       }
     });
   }
@@ -3630,11 +3655,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.center,
-                      colors: [Colors.black.withValues(alpha: 0.85), Colors.transparent],
-                    ),
+                    gradient: AppGradients.darkOverlay,
                   ),
                   padding: const EdgeInsets.all(16),
                   alignment: Alignment.bottomLeft,
@@ -3645,15 +3666,15 @@ class _ImageCarouselState extends State<_ImageCarousel> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF00C853),
+                          color: AppColors.primary,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(p['tag'] ?? '', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black)),
                       ),
-                      const SizedBox(height: 6),
-                      Text(p['title']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                      const SizedBox(height: 2),
-                      Text(p['subtitle']!, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                      AppSpacing.hXs,
+                      Text(p['title']!, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white)),
+                      AppSpacing.hXs,
+                      Text(p['subtitle']!, style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70)),
                     ],
                   ),
                 ),
@@ -3661,18 +3682,19 @@ class _ImageCarouselState extends State<_ImageCarousel> {
             },
           ),
         ),
-        const SizedBox(height: 10),
+        AppSpacing.hMd,
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(carouselProducts.length, (i) {
             return AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
+              duration: AppDurations.fast,
+              curve: AppEasing.easeOut,
               margin: const EdgeInsets.symmetric(horizontal: 3),
               width: _current == i ? 22 : 8,
               height: 8,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
-                color: _current == i ? const Color(0xFF00C853) : Colors.white24,
+                color: _current == i ? AppColors.primary : AppColors.textMuted.withValues(alpha: 0.3),
               ),
             );
           }),
@@ -3691,14 +3713,14 @@ class _VideoExplainer extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(Icons.play_circle_fill, color: Color(0xFF00C853), size: 22),
-            SizedBox(width: 8),
-            Text('How It Works', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Icon(Icons.play_circle_fill, color: AppColors.primary, size: 22),
+            AppSpacing.wSm,
+            Text('How It Works', style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700)),
           ],
         ),
-        const SizedBox(height: 12),
+        AppSpacing.hMd,
         GestureDetector(
           onTap: () async {
             final url = Uri.parse('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
@@ -3710,12 +3732,12 @@ class _VideoExplainer extends StatelessWidget {
             height: 200,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1B5E20), Color(0xFF0D0D0D)],
+              gradient: LinearGradient(
+                colors: [AppColors.primaryDark, AppColors.surface],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: AppColors.borderSubtle),
             ),
             child: Stack(
               alignment: Alignment.center,
@@ -3723,14 +3745,14 @@ class _VideoExplainer extends StatelessWidget {
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.play_circle_fill, size: 64, color: Color(0xFF00C853)),
-                    const SizedBox(height: 12),
+                    Icon(Icons.play_circle_fill, size: 64, color: AppColors.primary),
+                    AppSpacing.hMd,
                     Text('Watch: How CryptoVault Protects Your Assets',
-                      style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8)),
+                      style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textPrimary.withValues(alpha: 0.8)),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 6),
-                    const Text('Tap to watch on YouTube', style: TextStyle(fontSize: 11, color: Colors.white38)),
+                    AppSpacing.hXs,
+                    Text('Tap to watch on YouTube', style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textMuted)),
                   ],
                 ),
                 Positioned(
@@ -3738,7 +3760,7 @@ class _VideoExplainer extends StatelessWidget {
                   right: 12,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(8)),
                     child: const Text('LIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
                   ),
                 ),
@@ -3757,13 +3779,10 @@ class _OurProductSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: const Color(0xFF0D0D0D),
-        border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.15)),
-      ),
+      borderRadius: 18,
+      borderColor: AppColors.overlayGreenMedium,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3772,44 +3791,42 @@ class _OurProductSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withValues(alpha: 0.1),
+                  color: AppColors.overlayGreen,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.shield_rounded, color: Color(0xFF00C853), size: 22),
+                child: Icon(Icons.shield_rounded, color: AppColors.primary, size: 22),
               ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text('How CryptoVault Helps', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              AppSpacing.wMd,
+              Expanded(
+                child: Text('How CryptoVault Helps', style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          AppSpacing.hLg,
           _benefitRow(Icons.verified_user_rounded, 'Military-grade encryption keeps your funds safe at all times.'),
-          const SizedBox(height: 10),
+          AppSpacing.hMd,
           _benefitRow(Icons.swap_horiz_rounded, 'Instant deposits and withdrawals across all major blockchain networks.'),
-          const SizedBox(height: 10),
+          AppSpacing.hMd,
           _benefitRow(Icons.trending_up_rounded, 'Real-time balance tracking with automated sweep consolidation.'),
-          const SizedBox(height: 10),
+          AppSpacing.hMd,
           _benefitRow(Icons.support_agent_rounded, '24/7 monitoring and support — our team never sleeps on security.'),
-          const SizedBox(height: 18),
+          AppSpacing.hLg,
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              gradient: LinearGradient(
-                colors: [const Color(0xFF00C853).withValues(alpha: 0.08), const Color(0xFF00C853).withValues(alpha: 0.02)],
-              ),
-              border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.12)),
+              color: AppColors.overlayGreen,
+              border: Border.all(color: AppColors.overlayGreenMedium),
             ),
             child: Row(
               children: [
-                const Icon(Icons.auto_awesome, color: Color(0xFF00C853), size: 18),
-                const SizedBox(width: 10),
+                Icon(Icons.auto_awesome, color: AppColors.primary, size: 18),
+                AppSpacing.wMd,
                 Expanded(
                   child: Text(
                     'Trusted by 10,000+ users worldwide. Start protecting your crypto today.',
-                    style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7)),
+                    style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textPrimary.withValues(alpha: 0.7)),
                   ),
                 ),
               ],
@@ -3824,10 +3841,10 @@ class _OurProductSection extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF00C853)),
-        const SizedBox(width: 10),
+        Icon(icon, size: 18, color: AppColors.primary),
+        AppSpacing.wMd,
         Expanded(
-          child: Text(text, style: const TextStyle(fontSize: 13, color: Colors.white70, height: 1.3)),
+          child: Text(text, style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textPrimary.withValues(alpha: 0.7), height: 1.3)),
         ),
       ],
     );
@@ -3886,44 +3903,52 @@ class _ActivityList extends StatelessWidget {
           displayHash = hash.length > 10 ? "${hash.substring(0, 10)}..." : hash;
         }
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Container(
-            decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(15)),
+        return AnimatedScaleIn(
+          delay: i * 30,
+          child: AppCard(
+            margin: const EdgeInsets.only(bottom: 12),
+            borderRadius: 15,
+            padding: EdgeInsets.zero,
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: (isDeposit ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+                backgroundColor: (isDeposit ? AppColors.overlayGreen : AppColors.overlayOrange),
                 child: Icon(
                   isDeposit ? Icons.call_received : Icons.call_made, 
-                  color: isDeposit ? Colors.greenAccent : Colors.orangeAccent, 
+                  color: isDeposit ? AppColors.success : AppColors.warning, 
                   size: 18
                 ),
               ),
               title: Text(
                 isDeposit ? '$token Received' : '$token Withdrawal', 
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14)
               ),
-              subtitle: Text(displayHash, style: const TextStyle(fontSize: 12, color: Colors.white54)),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${isDeposit ? '+' : '-'}${amount.toStringAsFixed(2)}', 
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold, 
-                      color: isDeposit ? Colors.greenAccent : Colors.orangeAccent
-                    )
-                  ),
-                  Text(
-                    status.toUpperCase(), 
-                    style: TextStyle(
-                      fontSize: 10, 
-                      fontWeight: FontWeight.bold,
-                      color: status == 'confirmed' || status == 'completed' ? Colors.greenAccent : Colors.orangeAccent
-                    )
-                  ),
-                ],
+              subtitle: Text(displayHash, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary)),
+              trailing: Flexible(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${isDeposit ? '+' : '-'}${amount.toStringAsFixed(2)}', 
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w700, 
+                        color: isDeposit ? AppColors.success : AppColors.warning
+                      )
+                    ),
+                    Text(
+                      status.toUpperCase(), 
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10, 
+                        fontWeight: FontWeight.w700,
+                        color: status == 'confirmed' || status == 'completed' ? AppColors.success : AppColors.warning
+                      )
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -3940,17 +3965,16 @@ class _AffiliatePromotionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: AppColors.surfaceCardAlt,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
+          border: Border.all(color: AppColors.accentBlue.withValues(alpha: 0.3)),
           gradient: LinearGradient(
-            colors: [Colors.blueAccent.withValues(alpha: 0.05), Colors.transparent],
+            colors: [AppColors.accentBlue.withValues(alpha: 0.05), Colors.transparent],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -3959,20 +3983,20 @@ class _AffiliatePromotionCard extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.blueAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: const Icon(Icons.people_outline, color: Colors.blueAccent),
+              decoration: BoxDecoration(color: AppColors.overlayBlue, shape: BoxShape.circle),
+              child: Icon(Icons.people_outline, color: AppColors.accentBlue),
             ),
-            const SizedBox(width: 15),
-            const Expanded(
+            AppSpacing.wLg,
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Affiliate Program', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text('Earn up to 23% in commissions', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text('Affiliate Program', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+                  Text('Earn up to 23% in commissions', style: GoogleFonts.poppins(color: AppColors.textTertiary, fontSize: 12)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white24),
+            Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textMuted),
           ],
         ),
       ),
@@ -4209,15 +4233,17 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   }
 
   Widget _buildSecurityNotice() {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.orange.withValues(alpha: 0.3))),
+      borderRadius: 15,
+      color: AppColors.overlayOrange,
+      borderColor: AppColors.warning.withValues(alpha: 0.3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 22),
-          const SizedBox(width: 12),
-          Expanded(child: Text('Only send $selectedToken to this address via $selectedNetwork. Using unsupported networks will result in permanent loss.', style: const TextStyle(fontSize: 12, color: Colors.orangeAccent))),
+          Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 22),
+          AppSpacing.wMd,
+          Expanded(child: Text('Only send $selectedToken to this address via $selectedNetwork. Using unsupported networks will result in permanent loss.', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.warning))),
         ],
       ),
     );
@@ -4507,25 +4533,14 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
               error: (e, s) => _buildSummary(0.0),
             ),
             
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton(
-                onPressed: (_isLoading || (double.tryParse(_amountCtrl.text) ?? 0) < 2.0) ? null : () {
-                  final bal = balanceAsync.asData?.value ?? "0";
-                  _handleWithdraw((double.tryParse(bal) ?? 0) / 1000000);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C853),
-                  foregroundColor: Colors.black,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                ),
-                child: _isLoading 
-                  ? const CircularProgressIndicator(color: Colors.black)
-                  : Text('Withdraw $selectedToken', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
+            AppSpacing.hXxl,
+            AppPrimaryButton(
+              label: 'Withdraw $selectedToken',
+              isLoading: _isLoading,
+              onPressed: (_isLoading || (double.tryParse(_amountCtrl.text) ?? 0) < 2.0) ? null : () {
+                final bal = balanceAsync.asData?.value ?? "0";
+                _handleWithdraw((double.tryParse(bal) ?? 0) / 1000000);
+              },
             ),
             
             const SizedBox(height: 40),
@@ -4693,13 +4708,11 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
     const fee = 0.25;
     final amountToReceive = amount > fee ? amount - fee : 0.0;
 
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.05), 
-        borderRadius: BorderRadius.circular(15), 
-        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.1)),
-      ),
+      borderRadius: 15,
+      color: AppColors.overlayGreen,
+      borderColor: AppColors.overlayGreen,
       child: Column(
         children: [
           _buildSummaryRow('Total to Deduct', '${amount.toStringAsFixed(2)} $selectedToken', isBold: true),
@@ -4775,14 +4788,10 @@ class _WithdrawalProcessItem extends StatelessWidget {
     DateTime date = DateTime.fromMillisecondsSinceEpoch(w['createdAt'] ?? 0);
     String dateStr = "${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
 
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
+      borderRadius: 20,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -5046,39 +5055,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            _buildProfileHeader(initials, email, auth.role ?? 'user', auth.isAdmin),
-            const SizedBox(height: 24),
-            _buildBalanceCard(rewardsBalance),
-            const SizedBox(height: 20),
-            _buildInviteCard(),
-            const SizedBox(height: 20),
-            _buildActionCard(
-              icon: Icons.lock_reset,
-              title: 'Reset Transaction Password',
-              subtitle: 'Send a reset link to your email',
-              color: Colors.orangeAccent,
-              onTap: _requestTransactionPasswordReset,
+            AnimatedEntry(delay: 0, child: _buildProfileHeader(initials, email, auth.role ?? 'user', auth.isAdmin)),
+            AppSpacing.hXxl,
+            AnimatedEntry(delay: 80, child: _buildBalanceCard(rewardsBalance)),
+            AppSpacing.hXl,
+            AnimatedEntry(delay: 160, child: _buildInviteCard()),
+            AppSpacing.hXl,
+            AnimatedEntry(
+              delay: 240,
+              child: _buildActionCard(
+                icon: Icons.lock_reset,
+                title: 'Reset Transaction Password',
+                subtitle: 'Send a reset link to your email',
+                color: AppColors.warning,
+                onTap: _requestTransactionPasswordReset,
+              ),
             ),
             if (auth.isAdmin) ...[
-              const SizedBox(height: 20),
-              _buildActionCard(
-                icon: Icons.admin_panel_settings_outlined,
-                title: 'Admin Dashboard',
-                subtitle: 'Manage users and system',
-                color: Colors.greenAccent,
-                onTap: () => context.push('/admin'),
+              AppSpacing.hXl,
+              AnimatedEntry(
+                delay: 300,
+                child: _buildActionCard(
+                  icon: Icons.admin_panel_settings_outlined,
+                  title: 'Admin Dashboard',
+                  subtitle: 'Manage users and system',
+                  color: AppColors.success,
+                  onTap: () => context.push('/admin'),
+                ),
               ),
             ],
-            const SizedBox(height: 20),
-            _buildActionCard(
-              icon: Icons.logout,
-              title: 'Log Out',
-              subtitle: null,
-              color: Colors.redAccent,
-              onTap: () {
-                ref.read(authProvider.notifier).logout();
-                context.go('/login');
-              },
+            AppSpacing.hXl,
+            AnimatedEntry(
+              delay: 360,
+              child: _buildActionCard(
+                icon: Icons.logout,
+                title: 'Log Out',
+                subtitle: null,
+                color: AppColors.error,
+                onTap: () {
+                  ref.read(authProvider.notifier).logout();
+                  context.go('/login');
+                },
+              ),
             ),
           ],
         ),
@@ -5087,33 +5105,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildProfileHeader(String initials, String email, String role, bool isAdmin) {
-    return Container(
-      width: double.infinity,
+    return AppCard(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1B5E20), Color(0xFF0D2818)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.3)),
+      borderRadius: 24,
+      gradient: LinearGradient(
+        colors: [AppColors.primaryDark, const Color(0xFF0D2818)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
+      borderColor: AppColors.overlayGreenStrong,
       child: Row(
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: const Color(0xFF00C853).withValues(alpha: 0.2),
+            backgroundColor: AppColors.overlayGreenMedium,
             child: Text(
               initials,
               style: GoogleFonts.poppins(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF00C853),
+                color: AppColors.primary,
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          AppSpacing.wLg,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -5127,14 +5142,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                AppSpacing.hXs,
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
-                    color: isAdmin ? const Color(0xFF00C853).withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.1),
+                    color: isAdmin ? AppColors.overlayGreenMedium : Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: isAdmin ? const Color(0xFF00C853) : Colors.white24,
+                      color: isAdmin ? AppColors.primary : Colors.white24,
                       width: 1,
                     ),
                   ),
@@ -5143,7 +5158,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      color: isAdmin ? const Color(0xFF00C853) : Colors.white54,
+                      color: isAdmin ? AppColors.primary : AppColors.textTertiary,
                       letterSpacing: 1,
                     ),
                   ),
@@ -5157,31 +5172,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildBalanceCard(double balance) {
-    return Container(
-      width: double.infinity,
+    return AppCard(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF00C853).withValues(alpha: 0.12),
-            const Color(0xFF00C853).withValues(alpha: 0.04),
-          ],
-        ),
-        border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.3),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00C853).withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      borderRadius: 24,
+      borderColor: AppColors.overlayGreenStrong,
+      borderWidth: 1.5,
+      glowColor: AppColors.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -5190,58 +5186,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withValues(alpha: 0.15),
+                  color: AppColors.overlayGreenMedium,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.redeem, color: Color(0xFF00C853), size: 22),
+                child: Icon(Icons.redeem, color: AppColors.primary, size: 22),
               ),
-              const SizedBox(width: 12),
+              AppSpacing.wMd,
               Text(
                 'Rewards Balance',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white70,
-                ),
+                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          AppSpacing.hLg,
           Text(
             '\$${balance.toStringAsFixed(2)}',
-            style: GoogleFonts.poppins(
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -1,
-            ),
+            style: GoogleFonts.poppins(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1),
           ),
-          const SizedBox(height: 4),
+          AppSpacing.hXs,
           Text(
             'Available for withdrawal',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Colors.white38,
-            ),
+            style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted),
           ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: () => context.push('/withdraw'),
-              icon: const Icon(Icons.arrow_circle_up_outlined, size: 20),
-              label: Text(
-                'Withdraw',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00C853),
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
-              ),
-            ),
+          AppSpacing.hXl,
+          AppPrimaryButton(
+            label: 'Withdraw',
+            icon: Icons.arrow_circle_up_outlined,
+            onPressed: () => context.push('/withdraw'),
           ),
         ],
       ),
@@ -5250,16 +5221,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildInviteCard() {
     final link = _inviteLink;
-    return Container(
-      width: double.infinity,
+    return AppCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: const Color(0xFF1E1E1E),
-        border: Border.all(
-          color: const Color(0xFF00C853).withValues(alpha: 0.12),
-        ),
-      ),
+      borderRadius: 20,
+      borderColor: AppColors.overlayGreen,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -5268,81 +5233,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withValues(alpha: 0.1),
+                  color: AppColors.overlayGreen,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.link, color: Color(0xFF00C853), size: 20),
+                child: Icon(Icons.link, color: AppColors.primary, size: 20),
               ),
-              const SizedBox(width: 12),
+              AppSpacing.wMd,
               Text(
                 'Invite Friends',
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+                style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          AppSpacing.hLg,
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+              border: Border.all(color: AppColors.borderSubtle),
             ),
             child: Text(
               link,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF00C853),
-                fontFamily: 'monospace',
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.primary, fontFamily: 'monospace'),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(height: 14),
+          AppSpacing.hLg,
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    onPressed: _copyInviteLink,
-                    icon: const Icon(Icons.copy, size: 18),
-                    label: Text(
-                      'Copy',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF00C853),
-                      side: const BorderSide(color: Color(0xFF00C853)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
+                child: AppOutlineButton(
+                  label: 'Copy',
+                  icon: Icons.copy,
+                  onPressed: _copyInviteLink,
                 ),
               ),
-              const SizedBox(width: 12),
+              AppSpacing.wMd,
               Expanded(
-                child: SizedBox(
+                child: AppPrimaryButton(
+                  label: 'Share',
+                  icon: Icons.share,
+                  onPressed: _shareInviteLink,
                   height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: _shareInviteLink,
-                    icon: const Icon(Icons.share, size: 18),
-                    label: Text(
-                      'Share',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00C853),
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -5359,16 +5294,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
+      child: AppCard(
         padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-        ),
+        borderRadius: 20,
         child: Row(
           children: [
             Container(
@@ -5379,27 +5309,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               child: Icon(icon, color: color, size: 22),
             ),
-            const SizedBox(width: 14),
+            AppSpacing.wLg,
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
                   ),
                   if (subtitle != null) ...[
-                    const SizedBox(height: 2),
+                    AppSpacing.hXs,
                     Text(
                       subtitle,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: Colors.white38,
-                      ),
+                      style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textMuted),
                     ),
                   ],
                 ],
@@ -5434,55 +5357,81 @@ class AdminDashboardScreen extends ConsumerWidget {
                   mainAxisSpacing: 15,
                   crossAxisSpacing: 15,
                   children: [
-                    _buildStatCard('Total Deposits', '${stats['depositCount']}', Colors.greenAccent),
-                    _buildStatCard('Total Volume', '\$${(stats['totalVolume'] / 1000000).toStringAsFixed(2)}', Colors.orangeAccent),
-                    _buildStatCard('Pending Sweeps', '${stats['pendingSweeps']}', Colors.blueAccent),
-                    _buildStatCard('Pending Withdrawals', '${stats['pendingWithdrawals']}', Colors.orangeAccent),
+                    _buildStatCard('Total Deposits', '${stats['depositCount']}', AppColors.success),
+                    _buildStatCard('Total Volume', '\$${(stats['totalVolume'] / 1000000).toStringAsFixed(2)}', AppColors.warning),
+                    _buildStatCard('Pending Sweeps', '${stats['pendingSweeps']}', AppColors.info),
+                    _buildStatCard('Pending Withdrawals', '${stats['pendingWithdrawals']}', AppColors.warning),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              ListTile(
-                tileColor: const Color(0xFF1E1E1E),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                leading: const Icon(Icons.people_alt_outlined, color: Colors.greenAccent),
-                title: const Text('User Management'),
-                subtitle: const Text('View users and change roles'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              AppSpacing.hXl,
+              AppPressable(
                 onTap: () => context.push('/admin/users'),
+                child: AppCard(
+                  borderRadius: 15,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.people_alt_outlined, color: AppColors.success),
+                      AppSpacing.wMd,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('User Management', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                            Text('View users and change roles', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 12),
-              ListTile(
-                tileColor: const Color(0xFF1E1E1E),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),                leading: const Icon(Icons.outbox_outlined, color: Colors.orangeAccent),
-                title: const Text('Withdrawal Management'),
-                subtitle: const Text('Process pending requests'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              AppSpacing.hMd,
+              AppPressable(
                 onTap: () => context.push('/admin/withdrawals'),
+                child: AppCard(
+                  borderRadius: 15,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.outbox_outlined, color: AppColors.warning),
+                      AppSpacing.wMd,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Withdrawal Management', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                            Text('Process pending requests', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMuted)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator(color: Colors.greenAccent)),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(child: Text('Error loading stats: $e')),
       ),
     );
   }
 
   Widget _buildStatCard(String title, String value, Color color) {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
+      borderRadius: 15,
+      borderColor: color.withValues(alpha: 0.3),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.white54)),
-          const SizedBox(height: 10),
-          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          Text(title, textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary)),
+          AppSpacing.hMd,
+          Text(value, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
     );
@@ -5500,35 +5449,41 @@ class UserManagementScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('MANAGE USERS')),
       body: usersAsync.when(
         data: (users) => ListView.builder(
+          padding: const EdgeInsets.all(16),
           itemCount: users.length,
           itemBuilder: (context, i) {
             final user = users[i];
             final String currentRole = user['role'] ?? 'user';
 
-            return ListTile(
-              title: Text(user['email'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('Role: ${currentRole.toUpperCase()}', style: TextStyle(color: currentRole == 'admin' ? Colors.greenAccent : Colors.white54)),
-              trailing: DropdownButton<String>(
-                value: currentRole,
-                underline: const SizedBox(),
-                dropdownColor: const Color(0xFF1E1E1E),
-                items: ['user', 'admin'].map((role) {
-                  return DropdownMenuItem(
-                    value: role, 
-                    child: Text(role.toUpperCase(), style: const TextStyle(fontSize: 12, color: Colors.greenAccent))
-                  );
-                }).toList(),
-                onChanged: (newRole) async {
-                  if (newRole != null && newRole != currentRole) {
-                    await ref.read(adminNotifierProvider.notifier).updateUserRole(user['_id'], newRole);
-                    if (user['_id'] == ref.read(authProvider).userId) {
-                      await ref.read(authProvider.notifier).refreshUser();
+            return AppCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              borderRadius: 15,
+              padding: EdgeInsets.zero,
+              child: ListTile(
+                title: Text(user['email'], style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                subtitle: Text('Role: ${currentRole.toUpperCase()}', style: GoogleFonts.poppins(color: currentRole == 'admin' ? AppColors.success : AppColors.textTertiary)),
+                trailing: DropdownButton<String>(
+                  value: currentRole,
+                  underline: const SizedBox(),
+                  dropdownColor: AppColors.surfaceElevated,
+                  items: ['user', 'admin'].map((role) {
+                    return DropdownMenuItem(
+                      value: role, 
+                      child: Text(role.toUpperCase(), style: GoogleFonts.poppins(fontSize: 12, color: AppColors.primary))
+                    );
+                  }).toList(),
+                  onChanged: (newRole) async {
+                    if (newRole != null && newRole != currentRole) {
+                      await ref.read(adminNotifierProvider.notifier).updateUserRole(user['_id'], newRole);
+                      if (user['_id'] == ref.read(authProvider).userId) {
+                        await ref.read(authProvider.notifier).refreshUser();
+                      }
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Updated ${user['email']} to $newRole')));
+                      }
                     }
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Updated ${user['email']} to $newRole')));
-                    }
-                  }
-                },
+                  },
+                ),
               ),
             );
           },
@@ -5558,11 +5513,10 @@ class _PendingWithdrawalsScreenState extends ConsumerState<PendingWithdrawalsScr
         title: const Text('PENDING WITHDRAWALS'),
         actions: [
           if (pendingAsync.hasValue && pendingAsync.value!.isNotEmpty)
-            IconButton(
-              icon: _isProcessingAll 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.bolt, color: Colors.orangeAccent),
-              tooltip: 'Process All',
+            AppIconButton(
+              icon: _isProcessingAll ? Icons.hourglass_empty : Icons.bolt,
+              color: AppColors.warning,
+              badge: _isProcessingAll ? null : null,
               onPressed: _isProcessingAll ? null : () async {
                 setState(() => _isProcessingAll = true);
                 await ref.read(adminNotifierProvider.notifier).processAllWithdrawals();
@@ -5577,7 +5531,7 @@ class _PendingWithdrawalsScreenState extends ConsumerState<PendingWithdrawalsScr
       body: pendingAsync.when(
         data: (list) {
           if (list.isEmpty) {
-            return const Center(child: Text('No pending withdrawals', style: TextStyle(color: Colors.white38)));
+            return Center(child: Text('No pending withdrawals', style: GoogleFonts.poppins(color: AppColors.textMuted)));
           }
           return ListView.builder(
             itemCount: list.length,
@@ -5587,29 +5541,30 @@ class _PendingWithdrawalsScreenState extends ConsumerState<PendingWithdrawalsScr
               double amount = 0;
               try { amount = double.parse(w['amount'].toString()) / 1000000; } catch (_) {}
               
-              return Card(
-                color: const Color(0xFF1E1E1E),
+              return AppCard(
                 margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                borderRadius: 15,
+                padding: EdgeInsets.zero,
                 child: ListTile(
-                  title: Text('${amount.toStringAsFixed(2)} ${w['token']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.greenAccent)),
-                  subtitle: Text('To: ${w['toAddress'].substring(0, 10)}...\nNet: ${w['network']}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
-                  trailing: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(horizontal: 12)),
+                  title: Text('${amount.toStringAsFixed(2)} ${w['token']}', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.success)),
+                  subtitle: Text('To: ${w['toAddress'].substring(0, 10)}...\nNet: ${w['network']}', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textTertiary)),
+                  trailing: AppPrimaryButton(
+                    label: 'PROCESS',
                     onPressed: () async {
                       await ref.read(adminNotifierProvider.notifier).processWithdrawal(w['_id']);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Withdrawal processing...')));
                       }
                     },
-                    child: const Text('PROCESS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    height: 40,
+                    fullWidth: false,
                   ),
                 ),
               );
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: Colors.greenAccent)),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(child: Text('Error: $e')),
       ),
     );

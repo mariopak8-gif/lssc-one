@@ -147,5 +147,6 @@ export default defineSchema({
     equipmentPrice: v.number(),
     dailyIncome: v.number(),
     purchasedAt: v.number(),
+    lastClaimedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 });

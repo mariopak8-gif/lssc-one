@@ -72,14 +72,11 @@ final transactionsProvider = FutureProvider.family<List<dynamic>, String>((ref, 
   if (userId.isEmpty) return [];
   final apiService = ref.read(apiServiceProvider);
   try {
-    final syncRes = await apiService.syncDeposits(userId).timeout(const Duration(seconds: 15));
-    // If new deposits were found and confirmed, invalidate the balance to show the update
-    if (syncRes.data is Map && syncRes.data['foundNew'] != null && (syncRes.data['foundNew'] as int) > 0) {
-      ref.invalidate(balanceProvider(userId));
-    }
+    await apiService.syncDeposits(userId).timeout(const Duration(seconds: 60));
   } catch (e) {
-    print("Background sync skipped: $e");
+    print("Background sync issue: $e");
   }
+  ref.invalidate(balanceProvider(userId));
 
   try {
     final response = await apiService.getTransactions(userId);
@@ -126,17 +123,15 @@ final syncProvider = FutureProvider.family<int, String>((ref, userId) async {
   if (userId.isEmpty) return 0;
   final apiService = ref.read(apiServiceProvider);
   try {
-    final response = await apiService.syncDeposits(userId);
+    final response = await apiService.syncDeposits(userId).timeout(const Duration(seconds: 60));
+    ref.invalidate(balanceProvider(userId));
     if (response.data is Map && response.data['foundNew'] != null) {
-      final found = response.data['foundNew'] as int;
-      if (found > 0) {
-        ref.invalidate(balanceProvider(userId));
-      }
-      return found;
+      return response.data['foundNew'] as int;
     }
     return 0;
   } catch (e) {
     print("Manual sync failed: $e");
+    ref.invalidate(balanceProvider(userId));
     return 0;
   }
 });
