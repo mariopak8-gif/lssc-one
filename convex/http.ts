@@ -58,7 +58,6 @@ http.route({ path: "/run/referrals:getTeamStats", method: "OPTIONS", handler: ht
 http.route({ path: "/run/referrals:getTeamMembers", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/referrals:getReferralEarningsHistory", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/referrals:getLeaderboard", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
-http.route({ path: "/run/networks:getActiveNetworks", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 http.route({ path: "/run/networks:getAllNetworks", method: "OPTIONS", handler: httpAction(async () => corsResponse()) });
 
 // --- Auth Routes ---
@@ -505,19 +504,6 @@ http.route({
   handler: httpAction(async (ctx) => {
     try {
       const result = await ctx.runQuery(api.referrals.getLeaderboard);
-      return jsonResponse(result);
-    } catch (e: any) {
-      return jsonResponse(e.message, 400);
-    }
-  }),
-});
-
-http.route({
-  path: "/run/networks:getActiveNetworks",
-  method: "GET",
-  handler: httpAction(async (ctx) => {
-    try {
-      const result = await ctx.runQuery(api.networks.getActiveNetworks);
       return jsonResponse(result);
     } catch (e: any) {
       return jsonResponse(e.message, 400);
