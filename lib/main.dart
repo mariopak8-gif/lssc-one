@@ -2295,6 +2295,8 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                     Expanded(child: _buildTeamCard(title: 'Team C', count: '$cCount', percent: '$cIncome%', color: AppColors.accentPurple, gradientColors: [AppColors.overlayPurpleSoft, Colors.transparent])),
                   ],
                 ),
+                const SizedBox(height: 24),
+                _buildRecentCommissions(),
               ],
             ),
           );
@@ -2348,6 +2350,159 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
               color: color,
               fontWeight: FontWeight.w600,
             )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentCommissions() {
+    final earningsAsync = ref.watch(referralEarningsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Recent Commissions', style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        )),
+        const SizedBox(height: 12),
+        earningsAsync.when(
+          data: (earnings) {
+            final recent = earnings.take(5).toList();
+            if (recent.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF1E1E1E),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: const Text(
+                  'No commissions yet.\nInvite friends to earn!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.white54, height: 1.5),
+                ),
+              );
+            }
+            return Column(
+              children: [
+                ...recent.map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _buildCommissionTile(e),
+                )),
+                if (earnings.length > 5)
+                  TextButton(
+                    onPressed: () => context.push('/referrals/earnings'),
+                    child: Text(
+                      'View All (${earnings.length})',
+                      style: const TextStyle(color: Color(0xFF00C853)),
+                    ),
+                  ),
+              ],
+            );
+          },
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (e, _) => Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF1E1E1E),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: const Text(
+              'Could not load commissions',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.white54),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCommissionTile(ReferralCommission item) {
+    final date = DateTime.fromMillisecondsSinceEpoch(item.createdAt);
+    final dateStr = '${date.month}/${date.day}/${date.year}';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF1E1E1E),
+        border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF00C853).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.person_outline,
+              color: Color(0xFF00C853),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.fromUsername,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  'Level ${item.level} \u2022 ${item.percent}% of \$${item.depositAmount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.white54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '+\$${item.commissionAmount.toStringAsFixed(2)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF00C853),
+                  ),
+                ),
+                Text(
+                  dateStr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.white38,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
