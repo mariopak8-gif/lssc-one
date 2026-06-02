@@ -46,3 +46,4 @@ app.*.map.json
 
 # Preserve build/web for Vercel deployment
 !/build/web
+build/
