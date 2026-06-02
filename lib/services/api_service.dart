@@ -12,11 +12,16 @@ class ApiService {
   }
 
   static String _getConvexUrl() {
-    final url = dotenv.env['CONVEX_SITE_URL'];
+    final siteUrl = dotenv.env['CONVEX_SITE_URL'];
+    if (siteUrl != null && siteUrl.isNotEmpty) {
+      return siteUrl;
+    }
+
+    final url = dotenv.env['CONVEX_URL'];
     if (url == null || url.isEmpty) {
       throw ArgumentError(
-        'CONVEX_SITE_URL not found in .env file. '
-        'Make sure your .env file contains: CONVEX_SITE_URL=https://quick-rooster-999.convex.site',
+        'CONVEX_SITE_URL or CONVEX_URL not found in .env file. '
+        'Make sure your .env file contains: CONVEX_SITE_URL=https://your-deployment.eu-west-1.convex.site',
       );
     }
     return url;

@@ -184,11 +184,13 @@ class _AnimatedEntryState extends State<AnimatedEntry>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) => Opacity(
-        opacity: widget.opacity ? _fadeAnim.value : 1.0,
-        child: FractionalTranslation(
-          translation: _slideAnim.value,
-          child: child,
+      builder: (context, child) => ClipRect(
+        child: Opacity(
+          opacity: widget.opacity ? _fadeAnim.value : 1.0,
+          child: FractionalTranslation(
+            translation: _slideAnim.value,
+            child: child,
+          ),
         ),
       ),
       child: widget.child,
