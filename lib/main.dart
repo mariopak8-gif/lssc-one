@@ -69,7 +69,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: '/', builder: (context, state) => const DashboardScreen()),
           GoRoute(path: '/earnings', builder: (context, state) => const EarningsScreen()),
-          GoRoute(path: '/bike', builder: (context, state) => const BikeScreen()),
+          GoRoute(path: '/lssc', builder: (context, state) => const LsscScreen()),
+          GoRoute(path: '/bike', builder: (context, state) => const LsscScreen()),
           GoRoute(path: '/team', builder: (context, state) => const TeamScreen()),
           GoRoute(path: '/my', builder: (context, state) => const SettingsScreen()),
           GoRoute(path: '/deposit', builder: (context, state) => const DepositScreen()),
@@ -154,7 +155,7 @@ class MainShell extends StatelessWidget {
   static const _navItems = [
     ('/', Icons.home_rounded, 'Home'),
     ('/earnings', Icons.auto_graph_rounded, 'Earnings'),
-    ('/bike', Icons.directions_bike_rounded, 'Bike'),
+    ('/lssc', Icons.directions_bike_rounded, 'LSSC'),
     ('/team', Icons.people_rounded, 'Team'),
     ('/my', Icons.person_rounded, 'Me'),
   ];
@@ -367,9 +368,9 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
                     return _buildProductsTab(purchaseData);
                   },
                   loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, st) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
+                  error: (e, st) => SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -685,7 +686,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
               ),
               AppSpacing.hMd,
               Text(
-                'Purchase a bike package to start\ngenerating daily earnings!',
+                'Purchase an LSSC package to start\ngenerating daily earnings!',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                   fontSize: 14,
@@ -699,7 +700,7 @@ class _EarningsScreenState extends ConsumerState<EarningsScreen>
                 child: AppPrimaryButton(
                   label: 'Go to Shop',
                   icon: Icons.directions_bike_rounded,
-                  onPressed: () => context.push('/bike'),
+                  onPressed: () => context.push('/lssc'),
                 ),
               ),
             ],
@@ -1211,14 +1212,14 @@ class _ClaimButton extends StatelessWidget {
   }
 }
 
-class BikeScreen extends ConsumerStatefulWidget {
-  const BikeScreen({super.key});
+class LsscScreen extends ConsumerStatefulWidget {
+  const LsscScreen({super.key});
 
   @override
-  ConsumerState<BikeScreen> createState() => _BikeScreenState();
+  ConsumerState<LsscScreen> createState() => _LsscScreenState();
 }
 
-class _BikeScreenState extends ConsumerState<BikeScreen> {
+class _LsscScreenState extends ConsumerState<LsscScreen> {
   static const _bikeOrder = [
     'beginner',
     'blue_s1',
@@ -1233,99 +1234,99 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
     'blue_s10',
   ];
 
-  late List<BikeModel> bikes;
+  late List<LsscModel> bikes;
 
   @override
   void initState() {
     super.initState();
     bikes = [
-      BikeModel(
+      LsscModel(
         id: 'beginner',
         name: 'Beginner period',
         icon: '⚡',
         equipmentPrice: 17.00,
         dailyIncome: 1.90,
-        imageUrl: 'asset/4.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s1',
-        name: 'BLUE-S1',
+        name: 'LSSC-S1',
         icon: '⚡',
         equipmentPrice: 57.00,
         dailyIncome: 6.30,
-        imageUrl: 'asset/5.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s2',
-        name: 'BLUE-S2',
+        name: 'LSSC-S2',
         icon: '⚡',
         equipmentPrice: 277.00,
         dailyIncome: 31.00,
-        imageUrl: 'asset/6.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s3',
-        name: 'BLUE-S3',
+        name: 'LSSC-S3',
         icon: '⚡',
         equipmentPrice: 677.00,
         dailyIncome: 80.00,
-        imageUrl: 'asset/7.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s4',
-        name: 'BLUE-S4',
+        name: 'LSSC-S4',
         icon: '⚡',
         equipmentPrice: 1166.00,
         dailyIncome: 138.00,
-        imageUrl: 'asset/8.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s5',
-        name: 'BLUE-S5',
+        name: 'LSSC-S5',
         icon: '⚡',
         equipmentPrice: 2266.00,
         dailyIncome: 268.00,
-        imageUrl: 'asset/9.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s6',
-        name: 'BLUE-S6',
+        name: 'LSSC-S6',
         icon: '⚡',
         equipmentPrice: 4466.00,
         dailyIncome: 548.00,
-        imageUrl: 'asset/10.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s7',
-        name: 'BLUE-S7',
+        name: 'LSSC-S7',
         icon: '⚡',
         equipmentPrice: 7766.00,
         dailyIncome: 955.00,
-        imageUrl: 'asset/1.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s8',
-        name: 'BLUE-S8',
+        name: 'LSSC-S8',
         icon: '⚡',
         equipmentPrice: 16888.00,
         dailyIncome: 2046.00,
-        imageUrl: 'asset/2.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s9',
-        name: 'BLUE-S9',
+        name: 'LSSC-S9',
         icon: '⚡',
         equipmentPrice: 22888.00,
         dailyIncome: 2858.00,
-        imageUrl: 'asset/3.png',
+        imageUrl: 'asset/lssc.png',
       ),
-      BikeModel(
+      LsscModel(
         id: 'blue_s10',
-        name: 'BLUE-S10',
+        name: 'LSSC-S10',
         icon: '⚡',
         equipmentPrice: 36888.00,
         dailyIncome: 4606.00,
-        imageUrl: 'asset/4.png',
+        imageUrl: 'asset/lssc.png',
       ),
     ];
   }
@@ -1342,7 +1343,7 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
           child: Column(
             children: [
               Text(
-                'BIKE SHOP',
+                'LSSC SHOP',
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
                   fontSize: 24,
@@ -1515,7 +1516,7 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
                               disabledReason = 'Insufficient balance';
                             }
 
-                            return BikeCard(
+                            return LsscCard(
                               bike: bike,
                               colorScheme: colorScheme,
                               isOwned: isOwned,
@@ -1729,7 +1730,7 @@ class _BikeScreenState extends ConsumerState<BikeScreen> {
   }
 }
 
-class BikeModel {
+class LsscModel {
   final String id;
   final String name;
   final String icon;
@@ -1738,7 +1739,7 @@ class BikeModel {
   final String? imageUrl;
   bool isOwned;
 
-  BikeModel({
+  LsscModel({
     required this.id,
     required this.name,
     required this.icon,
@@ -1749,8 +1750,8 @@ class BikeModel {
   });
 }
 
-class BikeCard extends ConsumerStatefulWidget {
-  final BikeModel bike;
+class LsscCard extends ConsumerStatefulWidget {
+  final LsscModel bike;
   final ColorScheme colorScheme;
   final bool isOwned;
   final bool canBuy;
@@ -1758,7 +1759,7 @@ class BikeCard extends ConsumerStatefulWidget {
   final String? disabledReason;
   final VoidCallback? onStatusChanged;
 
-  const BikeCard({
+  const LsscCard({
     required this.bike,
     required this.colorScheme,
     required this.isOwned,
@@ -1770,13 +1771,13 @@ class BikeCard extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<BikeCard> createState() => _BikeCardState();
+  ConsumerState<LsscCard> createState() => _LsscCardState();
 }
 
-class _BikeCardState extends ConsumerState<BikeCard> {
+class _LsscCardState extends ConsumerState<LsscCard> {
   bool _isLoading = false;
 
-  void _joinBike() async {
+  void _joinLssc() async {
     final userId = ref.read(authProvider).userId;
     if (userId == null) return;
 
@@ -1801,14 +1802,14 @@ class _BikeCardState extends ConsumerState<BikeCard> {
           : await ref.read(purchasesProvider.future);
 
       final highestOwnedIndex = purchases
-          .map((p) => _BikeScreenState._bikeOrder.indexOf(p['bikeId'] as String? ?? ''))
+          .map((p) => _LsscScreenState._bikeOrder.indexOf(p['bikeId'] as String? ?? ''))
           .where((index) => index >= 0)
           .fold<int?>(null, (prev, index) => prev == null ? index : index > prev ? index : prev) ?? -1;
       if (highestOwnedIndex >= 0) {
         final nextIndex = highestOwnedIndex + 1;
-        if (nextIndex < _BikeScreenState._bikeOrder.length && widget.bike.id == _BikeScreenState._bikeOrder[nextIndex]) {
+        if (nextIndex < _LsscScreenState._bikeOrder.length && widget.bike.id == _LsscScreenState._bikeOrder[nextIndex]) {
           final refundPurchase = purchases.firstWhere(
-            (p) => _BikeScreenState._bikeOrder.indexOf(p['bikeId'] as String? ?? '') == highestOwnedIndex,
+            (p) => _LsscScreenState._bikeOrder.indexOf(p['bikeId'] as String? ?? '') == highestOwnedIndex,
             orElse: () => {},
           );
           {
@@ -2007,22 +2008,22 @@ class _BikeCardState extends ConsumerState<BikeCard> {
       child: SizedBox(
         width: imgWidth,
         height: imgHeight,
-        child: widget.bike.imageUrl != null
-            ? Image.asset(
-                widget.bike.imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _fallbackImage(),
-              )
-            : _fallbackImage(),
+        child: Image.asset(
+          widget.bike.imageUrl ?? 'asset/lssc.png',
+          fit: BoxFit.contain,
+          width: imgWidth,
+          height: imgHeight,
+        ),
       ),
     );
   }
 
   Widget _fallbackImage() {
-    return Container(
-      color: const Color(0xFF00C853).withValues(alpha: 0.15),
-      child: Center(
-        child: Text(widget.bike.icon, style: const TextStyle(fontSize: 40)),
+    return Image.asset(
+      'asset/lssc.png',
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        color: const Color(0xFF00C853).withValues(alpha: 0.15),
       ),
     );
   }
@@ -2247,7 +2248,7 @@ class _BikeCardState extends ConsumerState<BikeCard> {
         ),
         const Spacer(),
         ElevatedButton(
-          onPressed: _isLoading ? null : _joinBike,
+          onPressed: _isLoading ? null : _joinLssc,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF00C853),
             disabledBackgroundColor: Colors.grey[700],
