@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ApiService {
@@ -12,16 +11,16 @@ class ApiService {
   }
 
   static String _getConvexUrl() {
-    final siteUrl = dotenv.env['CONVEX_SITE_URL'];
-    if (siteUrl != null && siteUrl.isNotEmpty) {
+    const siteUrl = String.fromEnvironment('CONVEX_SITE_URL');
+    if (siteUrl.isNotEmpty) {
       return siteUrl;
     }
 
-    final url = dotenv.env['CONVEX_URL'];
-    if (url == null || url.isEmpty) {
+    const url = String.fromEnvironment('CONVEX_URL');
+    if (url.isEmpty) {
       throw ArgumentError(
-        'CONVEX_SITE_URL or CONVEX_URL not found in .env file. '
-        'Make sure your .env file contains: CONVEX_SITE_URL=https://your-deployment.eu-west-1.convex.site',
+        'CONVEX_SITE_URL or CONVEX_URL not found in environment. '
+        'Make sure to pass --dart-define=CONVEX_SITE_URL=... or --dart-define=CONVEX_URL=...',
       );
     }
     return url;

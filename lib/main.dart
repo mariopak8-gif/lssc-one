@@ -10,7 +10,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/admin_provider.dart';
@@ -28,7 +27,6 @@ import 'components/app_card.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
   runApp(const ProviderScope(child: LSSCONEApp()));
 }
 
@@ -4548,7 +4546,7 @@ class _DepositScreenState extends ConsumerState<DepositScreen> {
   ];
 
   List<dynamic> get _visibleNetworks {
-    final useMainnet = (dotenv.env['USE_MAINNET'] == 'true');
+    const useMainnet = String.fromEnvironment('USE_MAINNET', defaultValue: 'false') == 'true';
     final filtered = useMainnet
         ? networks.where((n) => const [1, 137].contains(n['chainId'] as int?)).toList()
         : networks.where((n) => const [11155111, 80002].contains(n['chainId'] as int?)).toList();
@@ -4773,7 +4771,7 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   ];
 
   List<dynamic> get _visibleNetworks {
-    final useMainnet = (dotenv.env['USE_MAINNET'] == 'true');
+    const useMainnet = String.fromEnvironment('USE_MAINNET', defaultValue: 'false') == 'true';
     final filtered = useMainnet
         ? networks.where((n) => const [1, 137].contains(n['chainId'] as int?)).toList()
         : networks.where((n) => const [11155111, 80002].contains(n['chainId'] as int?)).toList();
