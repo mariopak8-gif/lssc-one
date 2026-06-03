@@ -4444,12 +4444,6 @@ class MessagesScreen extends ConsumerWidget {
                           ref.invalidate(unreadCountProvider(userId));
                         }
                       },
-                      onDelete: () async {
-                        final msgId = entry.value['_id'].toString();
-                        await ref.read(apiServiceProvider).deleteMessage(msgId, userId);
-                        ref.invalidate(messagesProvider(userId));
-                        ref.invalidate(unreadCountProvider(userId));
-                      },
                     ),
                   );
                 }),
@@ -4481,16 +4475,14 @@ class MessagesScreen extends ConsumerWidget {
   }
 }
 
-class _MessageItem extends StatelessWidget {
+class _MessageItem extends ConsumerWidget {
   final dynamic message;
   final String userId;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
   const _MessageItem({
     required this.message,
     required this.userId,
     required this.onTap,
-    required this.onDelete,
   });
 
   IconData _iconForType(String type) {
@@ -4539,7 +4531,7 @@ class _MessageItem extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bool isRead = message['read'] == true;
     final String type = message['type'] ?? 'system';
     final String title = message['title'] ?? '';
@@ -4604,11 +4596,13 @@ class _MessageItem extends StatelessWidget {
             ],
           ),
         );
-        if (confirmed == true) {
-          onDelete();
-          return true;
-        }
-        return false;
+        return confirmed ?? false;
+      },
+      onDismissed: (direction) async {
+        final id = message['_id'].toString();
+        await ref.read(apiServiceProvider).deleteMessage(id, userId);
+        ref.invalidate(messagesProvider(userId));
+        ref.invalidate(unreadCountProvider(userId));
       },
       child: GestureDetector(
         onTap: onTap,
@@ -5421,10 +5415,11 @@ class _WithdrawScreenState extends ConsumerState<WithdrawScreen> {
   }
 
   Widget _buildModernDropdown({required String label, required String? value, required List<String> items, required ValueChanged<String?>? onChanged}) {
-    // Ensure value always matches one of the items, or use empty string if no valid items
     String selectedValue = '';
     if (items.isNotEmpty && value != null && items.contains(value)) {
       selectedValue = value;
+    } else if (items.isNotEmpty) {
+      selectedValue = items.first;
     }
     
     return Row(
